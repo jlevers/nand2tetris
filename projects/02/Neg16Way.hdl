@@ -1,0 +1,14 @@
+// File name: projects/02/Neg16Way.hdl
+
+/**
+ * Checks if 16-bit number is negative:
+ * out = 1 if in[15] is 1, 0 otherwise
+ */
+
+CHIP Neg16Way {
+    IN in[16];
+    OUT out;
+
+    PARTS:
+    Or(a=in[15], b=false, out=out);
+}
