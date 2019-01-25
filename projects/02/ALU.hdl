@@ -42,27 +42,37 @@ CHIP ALU {
         ng; // 1 if (out < 0),  0 otherwise
 
     PARTS:
+    // Zero x and y if needed
     Mux16(a=x, b[0..15]=false, sel=zx, out=xmux1);
     Mux16(a=y, b[0..15]=false, sel=zy, out=ymux1);
 
+    // Negate x and y if needed
     Not16(in=xmux1, out=negx);
     Not16(in=ymux1, out=negy);
 
+    // Choose negated or unchanged x and y values
     Mux16(a=xmux1, b=negx, sel=nx, out=xmux2);
     Mux16(a=ymux1, b=negy, sel=ny, out=ymux2);
 
+    // Create anded and added versions of the modified inputs
     Add16(a=xmux2, b=ymux2, out=added);
     And16(a=xmux2, b=ymux2, out=anded);
 
+    // Choose between added and anded
     Mux16(a=anded, b=added, sel=f, out=preout);
 
+    // Create a negated version of the output
     Not16(in=preout, out=negout);
 
+    // Choose between the regular and negated output, and create a working copy
+    // of the result of that decision
     Mux16(a=preout, b=negout, sel=no, out=out);
     Mux16(a=preout, b=negout, sel=no, out=outcomp);
 
+    // Check if the output is 0
     Or16Way(in=outcomp, out=notzr);
     Not(in=notzr, out=zr);
-    
+
+    // Check if the output is negative
     Neg16Way(in=outcomp, out=ng);
 }
