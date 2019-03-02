@@ -2,6 +2,7 @@
 // and the book "The Elements of Computing Systems"
 // by Nisan and Schocken, MIT Press.
 // File name: projects/03/a/RAM64.hdl
+// Completed 2/28/2019 by Jesse Evers
 
 /**
  * Memory of 64 registers, each 16 bit-wide. Out holds the value
