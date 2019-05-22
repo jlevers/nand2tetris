@@ -49,6 +49,7 @@ CHIP CPU {
     And(a=instruction[4], b=instruction[15], out=loadRegD);
     DRegister(in=outALU, load=loadRegD, out=outRegD);
 
+    // Pass A or M into the ALU
     Mux16(a=outRegA, b=inM, sel=instruction[12], out=outAddrOrInstr);
     ALU(x=outRegD, y=outAddrOrInstr, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outALU, zr=zero, ng=neg);
 
@@ -62,9 +63,11 @@ CHIP CPU {
     Or(a=negCorrect, b=zeroCorrect, out=partial);
     Or(a=posCorrect, b=partial, out=anyCorrect);
 
+    // Process any jumps
     And(a=anyCorrect, b=instruction[15], out=jump);
     PC(in=outRegA, load=jump, inc=true, reset=reset, out[0..14]=pc);
 
+    // Create outputs
     And(a=instruction[3], b=instruction[15], out=writeM);
     Or16(a=outRegA, b=outRegA, out[0..14]=addressM);
     And(a=instruction[3], b=instruction[15], out=loadOutM);
