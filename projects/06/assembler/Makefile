@@ -4,15 +4,18 @@ CC = gcc
 # Compiler flags
 # -g		enables debugging with gdb
 # -Wall turns on most compiler warnings
-CFLAGS = -g -Wall
+CFLAGS = -g3 -Wall --std=c99
 
 # Executable to build
 TARGET = assembler
 
-all: $(TARGET)
+OBJECTS = main.o parser.o encoder.o
 
-$(TARGET): parser.o
-	$(CC) $(CFLAGS) -o assembler parser.o
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS) -lm
 
-parser.o: parser.c parser.h
-	$(CC) $(CFLAGS) -c parser.c
+clean:
+	rm *.o
+
+# symboltable.o: symboltable.c symboltable.h
+# 	$(CC) $(CFLAGS) -c symboltable.c

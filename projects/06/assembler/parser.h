@@ -5,20 +5,28 @@
  * @created 5/22/19
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef _PARSER_H
+#define _PARSER_H
 
-typedef enum command_type {
+typedef enum ct {
   A_COMMAND = 0,
   C_COMMAND = 1,
   L_COMMAND = -1
 } command_t;
 
-FILE* init(const char*);
-int process_file();
-int has_more_commands();
-void advance();
+typedef struct io {
+    FILE *in;
+    FILE *out;
+} io;
+
+io init(const char*);
+void process_file();
+int has_more_commands(FILE*);
+char* advance(FILE*);
 command_t command_type();
-char* dest();
-char* comp();
-char* jump();
+char* symbol(command_t, const char*);
+char* parse_dest(const char*);
+char* parse_comp(const char*);
+char* parse_jump(const char*);
+
+#endif

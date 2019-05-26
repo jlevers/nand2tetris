@@ -1,0 +1,7 @@
+{
+  "execPath": "/usr/bin/gcc",
+  "gccDefaultCFlags": "-c -Wall -g --std=c99",
+  "gccErrorLimit": 15,
+  "gccIncludePaths": ".,./include,./path",
+  "gccSuppressWarnings": true
+}
