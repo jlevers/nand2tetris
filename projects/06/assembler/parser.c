@@ -122,11 +122,12 @@ char* advance(FILE *file) {
         }
     }
 
-    if (skip || (has_more_commands(file) && strlen(command) <= 1)) {
-        return advance(file);
-    } else if (!has_more_commands(file)) {
+    if (!has_more_commands(file)) {
         return NULL;
+    } else if (skip || strlen(command) <= 1) {
+        return advance(file);
     }
+
     return command;
 }
 
@@ -178,12 +179,11 @@ char* parse_dest(const char* command) {
     char* destination = malloc(sizeof(char));
     destination[0] = '\0';
     for (int i = 0; i < MAX_DEST_LEN + 1; i++) {
-        if (command[i] == SEP || command[i] == EOL) {
-            return NULL;
-        }
-
-        if (command[i] == ASSIGN) {
+        if (command[i] == ASSIGN) {  // Destinations are followed by an assignment symbol, =
             return destination;
+        // If a separator or newline is reached, the command doesn't include a destination
+        } else if (command[i] == SEP || command[i] == EOL) {
+            return NULL;
         }
 
         destination = realloc(destination, sizeof(char) * (i + 1));
@@ -212,17 +212,18 @@ char* parse_comp(const char* command) {
         }
     }
 
+    // This is when there's no jump statement, so the computation statement goes to EOL
     if (!end_comp_idx) {
-        end_comp_idx = i - 1;  // Ignore the newline
+        end_comp_idx = i - 1;  // Don't include the newline in the computation text
     }
 
+    // Copy the computation text from the command
     int comp_len = end_comp_idx - start_comp_idx;
     char* computation = malloc((comp_len + 1) * sizeof(char));
     for (int i = 0; i < comp_len; i++) {
         computation[i] = command[i + start_comp_idx];
     }
     computation[comp_len] = '\0';
-
     return computation;
 }
 
@@ -237,7 +238,7 @@ char* parse_jump(const char* command) {
     for (; i < command_len; i++) {
         if (command[i] == EOL) {
             return NULL;
-        } else if (command[i] == SEP) {
+        } else if (command[i] == SEP) {  // Jump commands always start after a separator (";")
             i++;
             break;
         }
@@ -247,7 +248,8 @@ char* parse_jump(const char* command) {
         return NULL;
     }
 
-    char* jump = malloc((command_len - i) * sizeof(char));
-    memcpy(jump, command + i, (command_len - i) * sizeof(char));
+    char* jump = malloc((JMP_LEN + 1) * sizeof(char));
+    memcpy(jump, command + i, JMP_LEN * sizeof(char));
+    jump[strlen(jump)] = '\0';
     return jump;
 }

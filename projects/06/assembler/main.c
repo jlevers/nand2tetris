@@ -14,6 +14,12 @@
 
 const int WORD = 16;
 
+/**
+ * Converts @num into a WORD-1 bit binary number, with a leading 0. If the number is larger than
+ * 2^(WORD-1) - 1, it exits with code EXIT_FAILURE.
+ * @param  num The number to convert to binary.
+ * @return     A string containing the binary version of @num.
+ */
 char* parse_to_binary(int num) {
     char *binary = malloc(WORD * sizeof(char));
     memset(binary, '0', WORD);
@@ -59,35 +65,40 @@ int main(int argc, char *argv[]) {
     char* jump_encoded;
     char* binary_addr;
 
+    // Keep going until there's a null command (i.e., EOF)
     while (1) {
         char* command = advance(in);
         if (!command) {
             break;
         }
         cmd_type = command_type(command);
-        char* cmd_out = malloc(WORD * sizeof(char));
+        // Add 1 to command length for newline at end
+        char* cmd_out = malloc((WORD + 1) * sizeof(char));
 
         if (cmd_type == C_COMMAND) {
+            // Parse command
             destination = parse_dest(command);
             computation = parse_comp(command);
             jump_to = parse_jump(command);
 
+            // Encode command
             dest_encoded = encode_dest(destination);
             comp_encoded = encode_comp(computation);
             jump_encoded = encode_jump(jump_to);
 
+            // Generate machine code
             strcat(cmd_out, "111");
             strcat(cmd_out, comp_encoded);
             strcat(cmd_out, dest_encoded);
             strcat(cmd_out, jump_encoded);
-        } else {
+        } else {  // Just convert the input to an address
             binary_addr = parse_to_binary(atoi(command + 1));
             strcat(cmd_out, binary_addr);
         }
 
-        cmd_out = realloc(cmd_out, (strlen(cmd_out) + 1) * sizeof(char));
-        cmd_out[strlen(cmd_out) - 1] = '\n';
-        fwrite(cmd_out, sizeof(char), WORD, out);
+        // Add a newline to the end of the machine instruction and write it to file
+        cmd_out[strlen(cmd_out)] = '\n';
+        fwrite(cmd_out, sizeof(char), WORD + 1, out);
         free(command);
     }
 
