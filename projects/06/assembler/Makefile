@@ -1,21 +1,18 @@
-# The compiler to use
 CC = gcc
+CFLAGS = -Wall -Werror
+LDLIBS = -lm -L./hashtable/ -Wl,-rpath=./hashtable/ -lhashtable
+OBJFILES := encoder.o parser.o main.o symboltable.o
+OBJDIR := build
+OBJS := $(addprefix $(OBJDIR)/,$(OBJFILES))
+SRCDIR := src
+SRC := $(addprefix $(SRCDIR)/,$(OBJFILES:.o=.c))
+TARGET := assembler
 
-# Compiler flags
-# -g		enables debugging with gdb
-# -Wall turns on most compiler warnings
-CFLAGS = -g3 -Wall --std=c99
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-# Executable to build
-TARGET = assembler
-
-OBJECTS = main.o parser.o encoder.o
-
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS) -lm
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm *.o
-
-# symboltable.o: symboltable.c symboltable.h
-# 	$(CC) $(CFLAGS) -c symboltable.c
+	rm $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET)
