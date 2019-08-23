@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Werror
-OBJFILES := hash_table.o prime.o
+CFLAGS = -Wall -Werror -g
+OBJFILES := hash_table.o prime.o test.o
 OBJDIR := build
 OBJS := $(addprefix $(OBJDIR)/,$(OBJFILES))
 SRCDIR := src
@@ -13,5 +13,12 @@ $(TARGET): $(OBJS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -fpic -c -o $@ $<
 
+.PHONY: test clean
+
+test:
+	rm -f $(SRCDIR)/*.gch
+	$(CC) $(CFLAGS) $(OBJDIR)/test.o $(wildcard $(SRCDIR)/hash_table.*) -o $(OBJDIR)/$@
+	./$(OBJDIR)/$@
+
 clean:
-	rm $(OBJDIR)/*.o $(TARGET)
+	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET)
