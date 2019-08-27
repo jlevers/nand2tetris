@@ -1,3 +1,4 @@
 *.gch
 *.o
 /06/assembler/assembler
+*/**/build/

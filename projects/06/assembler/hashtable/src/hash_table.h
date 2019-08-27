@@ -27,14 +27,17 @@ extern ll_node LL_SENTINEL;
 static const unsigned long long HT_FNV_OFFSET_BASIS = 0xCBF29CE484222325U;
 static const unsigned long long HT_FNV_PRIME = 0x100000001B3U;
 
+/* Linked list functions */
 ll_node *ll_new();
-ll_node *ll_insert(struct ll_node*, const char*, const char*);
+ll_node *ll_insert(ll_node*, const char*, const char*);
 char *ll_search(ll_node*, const char*);
-void ll_remove(ll_node*, const char*);
-void ll_delete(ll_node**);
+ll_node *ll_remove(ll_node*, const char*);
+void ll_delete(ll_node*);
 
+/* Hash table functions */
+const unsigned long long fnv1a(const char*);
 ht_hash_table *ht_new(const int);
-ht_item *ht_insert(ht_hash_table*, const char*, const char*);
+void ht_insert(ht_hash_table*, const char*, const char*);
 char *ht_search(ht_hash_table*, const char*);
 void ht_remove(ht_hash_table*, const char*);
 void ht_delete(ht_hash_table*);
