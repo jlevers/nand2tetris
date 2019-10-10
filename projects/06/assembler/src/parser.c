@@ -55,11 +55,11 @@ io init(const char* file_in) {
     // <file_in>.hack. If there's no '.' in file_in, create an output file named out.hack.
     char* file_out;
     if (period_idx > -1) {
-        file_out = malloc((period_idx + strlen(FOUT_EXT)) * sizeof(char));
+        file_out = calloc(period_idx + strlen(FOUT_EXT) + 1, sizeof(char));
         file_out = strncpy(file_out, file_in, period_idx);
     } else {
         char* name = "out";
-        file_out = malloc((strlen(name) + strlen(FOUT_EXT)) * sizeof(char));
+        file_out = calloc(strlen(name) + strlen(FOUT_EXT) + 1, sizeof(char));
         file_out = strcpy(file_out, name);
     }
     strcat(file_out, FOUT_EXT);
@@ -78,56 +78,61 @@ io init(const char* file_in) {
 }
 
 /**
- * Checks if there are more lines of assembly to parse.
- * @param  file  The file to check for more lines of code.
- * @return 1 if there are more lines, 0 otherwise.
- */
-int has_more_commands(FILE *file) {
-    return !feof(file);
-}
-
-/**
  * Gets the next line of the .asm file being parsed.
  * @param  file  The file to get the next line of.
  * @return The next line of the file.
  */
 char* advance(FILE *file) {
-    char c;
+    int c = 0;
     size_t line_size = 1;
     int precomment = 0;
     int skip = 0;
-    char* command = malloc(sizeof(char));
+    int inline_comment = 0;
+    char* command = calloc(1, sizeof(char));
     command[0] = '\0';
-    while (has_more_commands(file)) {
-        c = fgetc(file);
-        if (c == BEGIN_COMMENT) {  // Skip comments
-            if (precomment) {
+    while ((c = fgetc(file)) != EOF) {
+        if (!inline_comment) {  // If we've reached an inline comment, just keep reading till EOL
+            if (c == BEGIN_COMMENT) {  // Skip comments
+                if (precomment) {
+                    if (line_size > 2) {     // Already read more than just '//',
+                        inline_comment = 1;  // so this must be an inline comment
+                    } else {
+                        skip = 1;
+                    }
+                } else {
+                    precomment = 1;
+                }
+            } else if (c == EOL && strlen(command) <= 1) {  // Skip empty lines
                 skip = 1;
-            } else {
-                precomment = 1;
+            } else if (c == ' ' || c == '\t') {  // Skip whitespace
+                continue;
             }
-        } else if (c == EOL && strlen(command) <= 1) {  // Skip empty lines
-            skip = 1;
-        } else if (c == ' ' || c == '\t') {  // Skip whitespace
-            continue;
+
+            line_size++;
+            command = realloc(command, sizeof(char) * line_size);
+            command[line_size - 2] = c;
+            command[line_size - 1] = '\0';
         }
 
-        line_size++;
-        command = realloc(command, sizeof(char) * line_size);
-        command[line_size - 2] = c;
-        command[line_size - 1] = '\0';
-
         if (c == EOL) {
+            int end_offset = inline_comment ? 2 : 1;
+            command[(line_size - 1) - end_offset] = '\0';
             break;
         }
     }
 
-    if (!has_more_commands(file)) {
+
+    if (c == EOF) {
+        if (ferror(file)) {
+            perror("Error advancing to next line of .asm file");
+            exit(EXIT_FAILURE);
+        }
         return NULL;
-    } else if (skip || strlen(command) <= 1) {
-        return advance(file);
     }
 
+    if (skip || strlen(command) <= 1) {
+        return advance(file);
+    }
     return command;
 }
 
@@ -136,7 +141,7 @@ char* advance(FILE *file) {
  * @param  command The command to determine the type of.
  * @return         The command type -- one of A_COMMAND, C_COMMAND, or L_COMMAND
  */
-command_t command_type(char* command) {
+command_t command_type(const char* command) {
     if (command[0] == A_CMD_BEGIN) {
         return A_COMMAND;
     } else if (command[0] == L_CMD_BEGIN) {
@@ -154,17 +159,24 @@ command_t command_type(char* command) {
  */
 char* parse_symbol(command_t symbol_type, char* command) {
     if (symbol_type == A_COMMAND) {
-        return command + 1;
+        // In the case of an A_COMMAND, the symbol is denoted @Xxx, so the length of the symbol is
+        // the length of the command minus the length of the '@'.
+        int sym_len = strlen(command) - 1;
+        char *cmd = calloc(sym_len + 1, sizeof(char));
+        strncpy(cmd, command + 1, sym_len);
+        cmd[sym_len] = '\0';
+        return cmd;
     }
 
     // In the case of an L_COMMAND, the symbol is denoted `(Xxx)`, so the length of the symbol is
     // the length of the command, `(Xxx)`, minus the length of the parentheses, `()`.
     int sym_len = strlen(command) - 2;
-    char* sym_name = malloc(sym_len * sizeof(char));
+    char* sym_name = calloc(sym_len + 1, sizeof(char));
     for (int i = 0; i < sym_len; i++) {
         sym_name[i] = command[i + 1];
     }
 
+    sym_name[sym_len] = '\0';
     return sym_name;
 }
 
@@ -176,7 +188,7 @@ char* parse_symbol(command_t symbol_type, char* command) {
  *      destinations were given in the current command.
  */
 char* parse_dest(const char* command) {
-    char* destination = malloc(sizeof(char));
+    char* destination = calloc(1, sizeof(char));
     destination[0] = '\0';
     for (int i = 0; i < MAX_DEST_LEN + 1; i++) {
         if (command[i] == ASSIGN) {  // Destinations are followed by an assignment symbol, =
@@ -186,7 +198,7 @@ char* parse_dest(const char* command) {
             return NULL;
         }
 
-        destination = realloc(destination, sizeof(char) * (i + 1));
+        destination = realloc(destination, sizeof(char) * (i + 2));
         destination[i] = command[i];
         destination[i + 1] = '\0';
     }
@@ -214,12 +226,12 @@ char* parse_comp(const char* command) {
 
     // This is when there's no jump statement, so the computation statement goes to EOL
     if (!end_comp_idx) {
-        end_comp_idx = i - 1;  // Don't include the newline in the computation text
+        end_comp_idx = i;
     }
 
     // Copy the computation text from the command
     int comp_len = end_comp_idx - start_comp_idx;
-    char* computation = malloc((comp_len + 1) * sizeof(char));
+    char* computation = calloc(comp_len + 1, sizeof(char));
     for (int i = 0; i < comp_len; i++) {
         computation[i] = command[i + start_comp_idx];
     }
@@ -248,7 +260,7 @@ char* parse_jump(const char* command) {
         return NULL;
     }
 
-    char* jump = malloc((JMP_LEN + 1) * sizeof(char));
+    char* jump = calloc(JMP_LEN + 1, sizeof(char));
     memcpy(jump, command + i, JMP_LEN * sizeof(char));
     jump[strlen(jump)] = '\0';
     return jump;

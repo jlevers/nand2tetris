@@ -2,3 +2,4 @@
 *.o
 /06/assembler/assembler
 */**/build/
+.hack

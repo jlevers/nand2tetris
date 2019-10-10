@@ -1,7 +1,7 @@
 /*
  * @author Jesse Evers
  * @email jesse27999@gmail.com
- * Inspired by, and nearly identical to, https://github.com/jamesroutley/write-a-hash-table
+ * Heavily influenced by https://github.com/jamesroutley/write-a-hash-table
  */
 
 #include <math.h>
@@ -15,7 +15,7 @@
 ll_node LL_SENTINEL = {NULL, NULL};
 
 static ht_item *ht_new_item(const char *k, const char *v) {
-    ht_item *i = malloc(sizeof(ht_item));
+    ht_item *i = calloc(1, sizeof(ht_item));
     i->key = strdup(k);
     i->value = strdup(v);
     return i;
@@ -45,7 +45,7 @@ ll_node *ll_new() {
  * @return       a pointer to the new head of the linked list
  */
 ll_node *ll_insert(struct ll_node *list, const char *key, const char *value) {
-    ll_node *new = malloc(sizeof(ll_node));
+    ll_node *new = calloc(1, sizeof(ll_node));
     new->value = ht_new_item(key, value);
     new->next = list;
     return new;
@@ -141,7 +141,7 @@ static const unsigned long long ht_hash(const char *input, const int size) {
 }
 
 ht_hash_table *ht_new(const int size) {
-    ht_hash_table* ht = malloc(sizeof(ht_hash_table));
+    ht_hash_table* ht = calloc(1, sizeof(ht_hash_table));
     ht->size = size;
     ht->count = 0;
     ht->nodes = calloc(size, sizeof(ll_node*));

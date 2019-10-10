@@ -8,8 +8,8 @@
 #include "../hashtable/src/hash_table.h"
 #include "symboltable.h"
 
-ht_hash_table* constructor() {
-    ht_hash_table *ht = ht_new();
+ht_hash_table* constructor(int size) {
+    ht_hash_table *ht = ht_new(size);
     ht_insert(ht, "SP", "0000000000000000");
     ht_insert(ht, "LCL", "0000000000000001");
     ht_insert(ht, "ARG", "0000000000000010");

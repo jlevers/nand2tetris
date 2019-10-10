@@ -43,8 +43,8 @@ char *COMPUTATIONS[][2] = {
 	{"-1\0"},
 	{"D\0"},
 	{"A\0", "M\0"},
+	{"!D\0"},
 	{"!A\0", "!M\0"},
-    {"!D\0"},
 	{"-D\0"},
 	{"-A\0", "-M\0"},
 	{"D+1\0"},
@@ -57,7 +57,7 @@ char *COMPUTATIONS[][2] = {
     {"D&A\0", "D&M\0"},
 	{"D|A\0", "D|M\0"}
 };
-int COMPUTATION_LENGTHS[18] = {1, 1, 1, 1, 2, 2, 1, 1, 2, 1, 2, 1, 2, 2, 2, 2, 2, 2};
+int COMPUTATION_LENGTHS[18] = {1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2, 2, 2, 2};
 char *COMPUTATION_CODES[] = {
     "101010\0",
 	"111111\0",
@@ -127,16 +127,26 @@ char* encode_dest(char* dest_str) {
  * @return          The machine code for the given computation command.
  */
 char* encode_comp(char* comp_str) {
-    char* comp = malloc(sizeof(char));
-    comp[0] = '\0';
+    char* comp = calloc(1, sizeof(char));
+	// Start computation command with bit indicating command type (0 means A, 1 means M)
+	char comp_type = '0';
+	if (strchr(comp_str, MEM) != NULL) {
+		comp_type = '1';
+	}
+	comp[0] = comp_type;
+
+	// Iterate over list of all possible computations
     for (int i = 0; i < sizeof(COMPUTATION_LENGTHS) / sizeof(int); i++) {
         char** comps_to_match = COMPUTATIONS[i];
         int len = COMPUTATION_LENGTHS[i];
+		// Iterate over meanings of this command (a command can have two different meanings
+		// depending on the value of comp_type)
         for (int j = 0; j < len; j++) {
             if (!strcmp(comp_str, comps_to_match[j])) {
+				// Add two extra chars for comp_type and the null terminator
                 comp = realloc(comp, (COMP_CODE_LEN + 2) * sizeof(char));
                 strcpy(comp + 1, COMPUTATION_CODES[i]);
-                comp[strlen(comp) - 1] = '\0';
+                comp[strlen(comp)] = '\0';
                 break;
             }
         }
@@ -147,12 +157,6 @@ char* encode_comp(char* comp_str) {
         exit(EXIT_FAILURE);
     }
 
-    // Prepend computation command type (0 means A, 1 means M)
-    char comp_type = '0';
-    if (strchr(comp_str, MEM) != NULL) {
-        comp_type = '1';
-    }
-    comp[0] = comp_type;
     return comp;
 }
 
