@@ -65,6 +65,7 @@ io init(const char* file_in) {
     strcat(file_out, FOUT_EXT);
 
     FILE *out = fopen(file_out, "w");
+    free(file_out);
 
     if (!out) {
         perror("Failed to open output file");
@@ -84,17 +85,18 @@ io init(const char* file_in) {
  */
 char* advance(FILE *file) {
     int c = 0;
-    size_t line_size = 1;
+    size_t line_size = 0;
     int precomment = 0;
     int skip = 0;
     int inline_comment = 0;
-    char* command = calloc(1, sizeof(char));
+    char *command = calloc(1, sizeof(char));
     command[0] = '\0';
+
     while ((c = fgetc(file)) != EOF) {
         if (!inline_comment) {  // If we've reached an inline comment, just keep reading till EOL
             if (c == BEGIN_COMMENT) {  // Skip comments
                 if (precomment) {
-                    if (line_size > 2) {     // Already read more than just '//',
+                    if (line_size > 1) {     // Already read more than just '//',
                         inline_comment = 1;  // so this must be an inline comment
                     } else {
                         skip = 1;
@@ -109,30 +111,33 @@ char* advance(FILE *file) {
             }
 
             line_size++;
-            command = realloc(command, sizeof(char) * line_size);
-            command[line_size - 2] = c;
-            command[line_size - 1] = '\0';
+            command = realloc(command, line_size + 1);
+            command[line_size - 1] = c;
+            command[line_size] = '\0';
         }
 
         if (c == EOL) {
             int end_offset = inline_comment ? 2 : 1;
-            command[(line_size - 1) - end_offset] = '\0';
+            command[line_size - end_offset] = '\0';
             break;
         }
     }
 
-
     if (c == EOF) {
         if (ferror(file)) {
             perror("Error advancing to next line of .asm file");
+            free(command);
             exit(EXIT_FAILURE);
         }
+        free(command);
         return NULL;
     }
 
     if (skip || strlen(command) <= 1) {
+        free(command);
         return advance(file);
     }
+
     return command;
 }
 
@@ -188,21 +193,23 @@ char* parse_symbol(command_t symbol_type, char* command) {
  *      destinations were given in the current command.
  */
 char* parse_dest(const char* command) {
-    char* destination = calloc(1, sizeof(char));
+    char *destination = calloc(1, sizeof(char));
     destination[0] = '\0';
     for (int i = 0; i < MAX_DEST_LEN + 1; i++) {
         if (command[i] == ASSIGN) {  // Destinations are followed by an assignment symbol, =
             return destination;
         // If a separator or newline is reached, the command doesn't include a destination
         } else if (command[i] == SEP || command[i] == EOL) {
+            free(destination);
             return NULL;
         }
 
-        destination = realloc(destination, sizeof(char) * (i + 2));
+        destination = realloc(destination, i + 2);
         destination[i] = command[i];
         destination[i + 1] = '\0';
     }
 
+    free(destination);
     return NULL;
 }
 
@@ -260,8 +267,8 @@ char* parse_jump(const char* command) {
         return NULL;
     }
 
-    char* jump = calloc(JMP_LEN + 1, sizeof(char));
-    memcpy(jump, command + i, JMP_LEN * sizeof(char));
+    char *jump = calloc(JMP_LEN + 1, sizeof(char));
+    memcpy(jump, command + i, JMP_LEN);
     jump[strlen(jump)] = '\0';
     return jump;
 }

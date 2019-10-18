@@ -61,22 +61,22 @@ void first_pass(FILE *in, ht_hash_table *ht) {
     int addr_ROM = 0;
 
     int line = 1;
-    while (1) {
-        char *command = advance(in);
+    char *command = NULL;
+    while ((command = advance(in)) != NULL) {
         line++;
-        if (!command) {
-            break;
-        }
 
         cmd_type = command_type(command);
-
         if (cmd_type == L_COMMAND) {
             char *symbol = parse_symbol(L_COMMAND, command);
             char *binary_addr = parse_to_binary(addr_ROM);
             ht_insert(ht, symbol, binary_addr);
+            free(symbol);
+            free(binary_addr);
         } else {
             addr_ROM++;
         }
+        free(command);
+        command = NULL;
     }
 }
 
@@ -90,65 +90,89 @@ void first_pass(FILE *in, ht_hash_table *ht) {
  */
 void second_pass(FILE *in, FILE *out, ht_hash_table *ht) {
     command_t cmd_type;
-    char* destination;
-    char* computation;
-    char* jump_to;
-    char* dest_encoded;
-    char* comp_encoded;
-    char* jump_encoded;
-    char* binary_addr;
     int addr_RAM = 16;
 
-    while (1) {
-        char *command = advance(in);
-        if (!command) {
-            break;
-        }
+    char *command = NULL;
+    char *computation = NULL;
+    char *destination = NULL;
+    char *jump_to = NULL;
+    char *comp_encoded = NULL;
+    const char *dest_encoded = NULL;
+    const char *jump_encoded = NULL;
+
+    while ((command = advance(in)) != NULL) {
+        char *cmd_out = calloc(WORD + 1, sizeof(char));
+        cmd_out[WORD] = '\0';
         cmd_type = command_type(command);
-        // Add 2 to command length for newline at end
-        char* cmd_out = calloc(WORD + 1, sizeof(char));
 
         if (cmd_type == C_COMMAND) {
             // Parse command
-            destination = parse_dest(command);
             computation = parse_comp(command);
+            destination = parse_dest(command);
             jump_to = parse_jump(command);
 
             // Encode command
-            dest_encoded = encode_dest(destination);
             comp_encoded = encode_comp(computation);
+            dest_encoded = encode_dest(destination);
             jump_encoded = encode_jump(jump_to);
 
             // Generate machine code
-            strcat(cmd_out, "111");
+            strcpy(cmd_out, "111\0");
             strcat(cmd_out, comp_encoded);
             strcat(cmd_out, dest_encoded);
             strcat(cmd_out, jump_encoded);
         } else if (cmd_type == A_COMMAND) {  // Convert the input to an address
             char *parsed = parse_symbol(cmd_type, command);
+            char *binary_addr = NULL;
+            int from_symbol_table = 0;
 
             char zero = '0';
             char nine = '9';
             // If the first character of the address isn't a digit
             if ((char)parsed[0] < zero || (char)parsed[0] > nine) {
                 binary_addr = ht_search(ht, parsed);
+
+                // If we haven't already stored this symbol in the symbol table, do so
                 if (binary_addr == NULL) {
                     binary_addr = parse_to_binary(addr_RAM);
                     ht_insert(ht, parsed, binary_addr);
                     addr_RAM++;
+                } else {
+                    from_symbol_table = 1;
                 }
             } else {
                 binary_addr = parse_to_binary(atoi(command + 1));
             }
-            strcat(cmd_out, binary_addr);
+
+            strcpy(cmd_out, binary_addr);
+            // Don't free binary_addr if we retrieved it from the symbol table, because we'd be
+            // deleting it from the symbol table
+            if (!from_symbol_table) free(binary_addr);
+            free(parsed);
         } else {
-            continue;
+            goto cleanup;
         }
 
         // Add a newline to the end of the machine instruction and write it to file
         cmd_out[WORD] = '\n';
         fwrite(cmd_out, sizeof(char), WORD + 1, out);
-        free(command);
+
+        // I know GOTOs are the root of all evil, but it seems like a more elegant solution than
+        // having a cleanup function that I have to pass 5 pointers to.
+        // See https://stackoverflow.com/a/24215512/3696964.
+        cleanup:
+            free(computation);
+            free(destination);
+            free(jump_to);
+            free(comp_encoded);
+            free(command);
+            free(cmd_out);
+            computation = NULL;
+            destination = NULL;
+            jump_to = NULL;
+            comp_encoded = NULL;
+            command = NULL;
+            cmd_out = NULL;
     }
 }
 
@@ -180,5 +204,6 @@ int main(int argc, char *argv[]) {
 
     fclose(in);
     fclose(out);
+    ht_delete(ht);
     return 0;
 }

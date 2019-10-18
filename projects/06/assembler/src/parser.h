@@ -22,7 +22,7 @@ typedef struct io {
 io init(const char*);
 void process_file();
 char* advance(FILE*);
-command_t command_type();
+command_t command_type(const char*);
 char* symbol(command_t, const char*);
 char* parse_dest(const char*);
 char* parse_comp(const char*);
