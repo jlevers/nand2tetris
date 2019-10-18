@@ -101,13 +101,13 @@ const char **jump_codes = DESTINATION_CODES;
  * @param  comp_str The destination command to convert.
  * @return          The machine code for the given destination command.
  */
-const char* encode_dest(char* dest_str) {
+const char *encode_dest(char *dest_str) {
     if (!dest_str) {
         return "000";
     }
 
     for (int i = 0; i < sizeof(DESTINATION_LENGTHS) / sizeof(int); i++) {
-        const char** dests_to_match = DESTINATIONS[i];
+        const char **dests_to_match = DESTINATIONS[i];
         int len = DESTINATION_LENGTHS[i];
         for (int j = 0; j < len; j++) {
             if (!strcmp(dest_str, dests_to_match[j])) {
@@ -126,8 +126,8 @@ const char* encode_dest(char* dest_str) {
  * @param  comp_str The computation command to convert.
  * @return          The machine code for the given computation command.
  */
-char* encode_comp(char* comp_str) {
-    char* comp = calloc(COMP_CODE_LEN + 2, sizeof(char));
+char *encode_comp(char *comp_str) {
+    char *comp = calloc(COMP_CODE_LEN + 2, sizeof(char));
 	// Start computation command with bit indicating command type (0 means A, 1 means M)
 	char comp_type = '0';
 	if (strchr(comp_str, MEM) != NULL) {
@@ -137,7 +137,7 @@ char* encode_comp(char* comp_str) {
 
 	// Iterate over list of all possible computations
     for (int i = 0; i < sizeof(COMPUTATION_LENGTHS) / sizeof(int); i++) {
-        const char** comps_to_match = COMPUTATIONS[i];
+        const char **comps_to_match = COMPUTATIONS[i];
         int len = COMPUTATION_LENGTHS[i];
 		// Iterate over meanings of this command (a command can have two different meanings
 		// depending on the value of comp_type)
@@ -165,7 +165,7 @@ char* encode_comp(char* comp_str) {
  * @param  jump_str The jump command to convert.
  * @return          The machine code for the given jump command.
  */
-const char* encode_jump(char* jump_str) {
+const char *encode_jump(char *jump_str) {
     if (!jump_str) {
         return "000";
     }

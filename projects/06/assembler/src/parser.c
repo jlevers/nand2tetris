@@ -14,7 +14,7 @@
 #ifndef _PARSER_VARS
 #define _PARSER_VARS
 
-const char* FOUT_EXT = ".hack\0";
+const char *FOUT_EXT = ".hack\0";
 
 const char BEGIN_COMMENT = '/';
 const char A_CMD_BEGIN = '@';
@@ -35,7 +35,7 @@ const int JMP_LEN = 3;       // All jump commands are 3 characters long
  * @param  filename The path to the .asm file to parse.
  * @return          The file handler pointer for the .asm file.
  */
-io init(const char* file_in) {
+io init(const char *file_in) {
     FILE *in = fopen(file_in, "r");
 
     if (!in) {
@@ -53,12 +53,12 @@ io init(const char* file_in) {
 
     // Find filename of input up until the period, if one exists, and create an output file named
     // <file_in>.hack. If there's no '.' in file_in, create an output file named out.hack.
-    char* file_out;
+    char *file_out;
     if (period_idx > -1) {
         file_out = calloc(period_idx + strlen(FOUT_EXT) + 1, sizeof(char));
         file_out = strncpy(file_out, file_in, period_idx);
     } else {
-        char* name = "out";
+        char *name = "out";
         file_out = calloc(strlen(name) + strlen(FOUT_EXT) + 1, sizeof(char));
         file_out = strcpy(file_out, name);
     }
@@ -83,7 +83,7 @@ io init(const char* file_in) {
  * @param  file  The file to get the next line of.
  * @return The next line of the file.
  */
-char* advance(FILE *file) {
+char *advance(FILE *file) {
     int c = 0;
     size_t line_size = 0;
     int precomment = 0;
@@ -146,7 +146,7 @@ char* advance(FILE *file) {
  * @param  command The command to determine the type of.
  * @return         The command type -- one of A_COMMAND, C_COMMAND, or L_COMMAND
  */
-command_t command_type(const char* command) {
+command_t command_type(const char *command) {
     if (command[0] == A_CMD_BEGIN) {
         return A_COMMAND;
     } else if (command[0] == L_CMD_BEGIN) {
@@ -162,7 +162,7 @@ command_t command_type(const char* command) {
  * @param  command     The command to parse the symbol out of.
  * @return             The symbol in the current line.
  */
-char* parse_symbol(command_t symbol_type, char* command) {
+char *parse_symbol(command_t symbol_type, char *command) {
     if (symbol_type == A_COMMAND) {
         // In the case of an A_COMMAND, the symbol is denoted @Xxx, so the length of the symbol is
         // the length of the command minus the length of the '@'.
@@ -176,7 +176,7 @@ char* parse_symbol(command_t symbol_type, char* command) {
     // In the case of an L_COMMAND, the symbol is denoted `(Xxx)`, so the length of the symbol is
     // the length of the command, `(Xxx)`, minus the length of the parentheses, `()`.
     int sym_len = strlen(command) - 2;
-    char* sym_name = calloc(sym_len + 1, sizeof(char));
+    char *sym_name = calloc(sym_len + 1, sizeof(char));
     for (int i = 0; i < sym_len; i++) {
         sym_name[i] = command[i + 1];
     }
@@ -192,7 +192,7 @@ char* parse_symbol(command_t symbol_type, char* command) {
  * @return The destination(s) in which to store the result of the current computation, or NULL if no
  *      destinations were given in the current command.
  */
-char* parse_dest(const char* command) {
+char *parse_dest(const char *command) {
     char *destination = calloc(1, sizeof(char));
     destination[0] = '\0';
     for (int i = 0; i < MAX_DEST_LEN + 1; i++) {
@@ -218,7 +218,7 @@ char* parse_dest(const char* command) {
  * @param  command  The command to parse the symbol out of.
  * @return The computation from the current command.
  */
-char* parse_comp(const char* command) {
+char *parse_comp(const char *command) {
     int start_comp_idx = 0;
     int end_comp_idx = 0;
 
@@ -238,7 +238,7 @@ char* parse_comp(const char* command) {
 
     // Copy the computation text from the command
     int comp_len = end_comp_idx - start_comp_idx;
-    char* computation = calloc(comp_len + 1, sizeof(char));
+    char *computation = calloc(comp_len + 1, sizeof(char));
     for (int i = 0; i < comp_len; i++) {
         computation[i] = command[i + start_comp_idx];
     }
@@ -251,7 +251,7 @@ char* parse_comp(const char* command) {
  * @param  command  The command to parse the symbol out of.
  * @return The current jump command if one exists, NULL otherwise.
  */
-char* parse_jump(const char* command) {
+char *parse_jump(const char *command) {
     int command_len = strlen(command);
     int i = 0;
     for (; i < command_len; i++) {

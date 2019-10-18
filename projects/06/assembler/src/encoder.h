@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char* encode_dest(char*);
-char* encode_comp(char*);
-const char* encode_jump(char*);
+const char *encode_dest(char*);
+char *encode_comp(char*);
+const char *encode_jump(char*);
 
 #endif

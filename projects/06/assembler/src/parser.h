@@ -21,12 +21,12 @@ typedef struct io {
 
 io init(const char*);
 void process_file();
-char* advance(FILE*);
+char *advance(FILE*);
 command_t command_type(const char*);
-char* symbol(command_t, const char*);
-char* parse_dest(const char*);
-char* parse_comp(const char*);
-char* parse_jump(const char*);
-char* parse_symbol(command_t, char*);
+char *symbol(command_t, const char*);
+char *parse_dest(const char*);
+char *parse_comp(const char*);
+char *parse_jump(const char*);
+char *parse_symbol(command_t, char*);
 
 #endif

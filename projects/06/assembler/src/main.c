@@ -23,7 +23,7 @@ const int WORD = 16;
  * @param  num The number to convert to binary.
  * @return     A string containing the binary version of @num.
  */
-char* parse_to_binary(int num) {
+char *parse_to_binary(int num) {
     char *binary = calloc(WORD + 1, sizeof(char));
     binary[WORD] = '\0';
 
