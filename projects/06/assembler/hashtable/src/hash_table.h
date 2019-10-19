@@ -31,7 +31,7 @@ static const unsigned long long HT_FNV_PRIME = 0x100000001B3U;
 ll_node *ll_new();
 ll_node *ll_insert(ll_node*, const char*, const char*);
 char *ll_search(ll_node*, const char*);
-ll_node *ll_remove(ll_node*, const char*);
+int ll_remove(ll_node**, const char*);
 void ll_delete(ll_node*);
 
 /* Hash table functions */

@@ -21,10 +21,13 @@ static ht_item *ht_new_item(const char *k, const char *v) {
     return i;
 }
 
-static void ht_del_item(ht_item *i) {
-    free(i->key);
-    free(i->value);
-    free(i);
+static void ht_del_item(ht_item **i) {
+    free((*i)->key);
+    (*i)->key = NULL;
+    free((*i)->value);
+    (*i)->value = NULL;
+    free(*i);
+    *i = NULL;
 }
 
 /**** LINKED LIST FUNCTIONS ****/
@@ -45,10 +48,10 @@ ll_node *ll_new() {
  * @return       a pointer to the new head of the linked list
  */
 ll_node *ll_insert(struct ll_node *list, const char *key, const char *value) {
-    ll_node *new = calloc(1, sizeof(ll_node));
-    new->value = ht_new_item(key, value);
-    new->next = list;
-    return new;
+    ll_node *new_node = calloc(1, sizeof(ll_node));
+    new_node->value = ht_new_item(key, value);
+    new_node->next = list;
+    return new_node;
 }
 
 /**
@@ -61,7 +64,7 @@ ll_node *ll_insert(struct ll_node *list, const char *key, const char *value) {
 static char *ll_search_recur(const char *key, ll_node *current, ll_node *prev) {
     if (current == &LL_SENTINEL) {
         return NULL;
-    } else if (strcmp(current->value->key, key) == 0) {
+    } else if (!strcmp(current->value->key, key)) {
         return current->value->value;
     } else {
         return ll_search_recur(key, current->next, current);
@@ -78,24 +81,22 @@ char *ll_search(ll_node *node, const char *key) {
     return ll_search_recur(key, node, NULL);
 }
 
-static ll_node *ll_remove_recur(const char *key, ll_node *current, ll_node *prev) {
-    if (current == &LL_SENTINEL) {  // Key doesn't exist in list
-        return current;
-    } else if (strcmp(current->value->key, key) == 0) {  // Found correct key
-        ht_del_item(current->value);
-        ll_node *head;
+static int ll_remove_recur(const char *key, ll_node **current, ll_node *prev) {
+    if (*current == &LL_SENTINEL) {  // Key doesn't exist in list
+        return 0;
+    } else if (!strcmp((*current)->value->key, key)) {  // Found correct key
+        ht_del_item(&((*current)->value));
+        ll_node *next = (*current)->next;
+        free(*current);
+        *current = NULL;
         if (prev == NULL) {  // If first item in list
-            head = current->next;
+            *current = next;
         } else {
-            prev->next = current->next;
-            head = NULL;
+            prev->next = next;
         }
-        free(current);
-        current = NULL;
-        return head;
+        return 1;
     } else {
-        ll_remove_recur(key, current->next, current);
-        return current;
+        return ll_remove_recur(key, &((*current)->next), *current);
     }
 }
 
@@ -104,7 +105,7 @@ static ll_node *ll_remove_recur(const char *key, ll_node *current, ll_node *prev
  * @param node the linked list to remove a node from
  * @param key  the key to remove
  */
-ll_node *ll_remove(ll_node *node, const char *key) {
+int ll_remove(ll_node **node, const char *key) {
     return ll_remove_recur(key, node, NULL);
 }
 
@@ -114,8 +115,9 @@ ll_node *ll_remove(ll_node *node, const char *key) {
  */
 void ll_delete(ll_node *node) {
     if (node != &LL_SENTINEL) {
-        ht_del_item(node->value);
+        ht_del_item(&(node->value));
         ll_delete(node->next);
+        free(node->next);
         free(node);
     }
 }
@@ -165,8 +167,8 @@ char *ht_search(ht_hash_table *ht, const char *key) {
 
 void ht_remove(ht_hash_table *ht, const char *key) {
     unsigned long long hash = ht_hash(key, ht->size);
-    ht->nodes[hash] = ll_remove(ht->nodes[hash], key);
-    ht->count--;
+    int removed = ll_remove(&(ht->nodes[hash]), key);
+    if (removed) ht->count--;
 }
 
 void ht_delete(ht_hash_table *ht) {

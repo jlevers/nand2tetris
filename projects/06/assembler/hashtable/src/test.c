@@ -24,7 +24,7 @@ static char *test_ll() {
     mu_assert("linked list should not contain key \"test\"", ll_search(ll, "test") == NULL);
 
     // Test ll_remove()
-    ll_remove(ll, "abc");
+    ll_remove(&ll, "abc");
     mu_assert("linked list should not contain \"abc:def\"", ll->next == &LL_SENTINEL);
     mu_assert("linked list should still contain \"123:456\"", !strcmp(ll->value->key, "123") && !strcmp(ll->value->value, "456"));
 
@@ -49,20 +49,25 @@ static char *test_ht() {
     ht_insert(ht, "abc", "def");
     ht_insert(ht, "123", "456");
     ht_insert(ht, "qwer", "tyuiop");
-    mu_assert("hash table should have key/value pair abc:def", strcmp(ht->nodes[1]->next->value->value, "def") == 0);
-    mu_assert("hash table should have key/value pair 123:456", strcmp(ht->nodes[1]->value->value, "456") == 0);
-    mu_assert("hash table should have key/value pair qwer:tyuiop", strcmp(ht->nodes[0]->value->value, "tyuiop") == 0);
+    mu_assert("hash table should have key/value pair abc:def", !strcmp(ht->nodes[1]->next->value->value, "def"));
+    mu_assert("hash table should have key/value pair 123:456", !strcmp(ht->nodes[1]->value->value, "456"));
+    mu_assert("hash table should have key/value pair qwer:tyuiop", !strcmp(ht->nodes[0]->value->value, "tyuiop"));
+    mu_assert("hash table count should be 3", ht->count == 3);
 
     // Test ht_search()
-    mu_assert("hash table search should find value \"def\" for key \"abc\"", strcmp(ht_search(ht, "abc"), "def") == 0);
-    mu_assert("hash table search should find value \"456\" for key \"123\"", strcmp(ht_search(ht, "123"), "456") == 0);
-    mu_assert("hash table search should find value \"tyuiop\" for key \"qwer\"", strcmp(ht_search(ht, "qwer"), "tyuiop") == 0);
+    mu_assert("hash table search should not find value for key \"foo\"", ht_search(ht, "foo") == NULL);
+    mu_assert("hash table search should find value \"def\" for key \"abc\"", !strcmp(ht_search(ht, "abc"), "def"));
+    mu_assert("hash table search should find value \"456\" for key \"123\"", !strcmp(ht_search(ht, "123"), "456"));
+    mu_assert("hash table search should find value \"tyuiop\" for key \"qwer\"", !strcmp(ht_search(ht, "qwer"), "tyuiop"));
 
     // Test ht_remove()
     ht_remove(ht, "abc");
     mu_assert("hash table should no longer contain key/value pair abc:def", ht->nodes[1]->next == &LL_SENTINEL);
     ht_remove(ht, "qwer");
     mu_assert("hash table should no longer contain key/value pair qwer:tyuiop", ht->nodes[0] == &LL_SENTINEL);
+    mu_assert("hash table count should be 1", ht->count == 1);
+    ht_remove(ht, "foo");
+    mu_assert("hash table count should still be 1", ht->count == 1);
 
     // Test ht_delete()
     // I'm really just testing this by making sure valgrind doesn't show a memory leak. I'm not sure
