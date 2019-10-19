@@ -32,7 +32,7 @@ ll_node *ll_new();
 ll_node *ll_insert(ll_node*, const char*, const char*);
 char *ll_search(ll_node*, const char*);
 int ll_remove(ll_node**, const char*);
-void ll_delete(ll_node*);
+void ll_delete(ll_node**);
 
 /* Hash table functions */
 const unsigned long long fnv1a(const char*);

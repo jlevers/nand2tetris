@@ -113,12 +113,12 @@ int ll_remove(ll_node **node, const char *key) {
  * Deletes the given linked list
  * @param node the linked list to delete
  */
-void ll_delete(ll_node *node) {
-    if (node != &LL_SENTINEL) {
-        ht_del_item(&(node->value));
-        ll_delete(node->next);
-        free(node->next);
-        free(node);
+void ll_delete(ll_node **node) {
+    if (*node != &LL_SENTINEL) {
+        ht_del_item(&((*node)->value));
+        ll_delete(&((*node)->next));
+        free(*node);
+        *node = NULL;
     }
 }
 
@@ -173,7 +173,7 @@ void ht_remove(ht_hash_table *ht, const char *key) {
 
 void ht_delete(ht_hash_table *ht) {
     for (int i = 0; i < ht->size; i++) {
-        ll_delete(ht->nodes[i]);
+        ll_delete(&(ht->nodes[i]));
     }
     free(ht->nodes);
     free(ht);

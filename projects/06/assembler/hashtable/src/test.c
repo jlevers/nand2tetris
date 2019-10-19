@@ -31,7 +31,7 @@ static char *test_ll() {
     // Test ll_delete()
     // I'm really just testing this by making sure valgrind doesn't show a memory leak. I'm not sure
     // how to programmatically test if a set of pointers inside a struct got freed.
-    ll_delete(ll);
+    ll_delete(&ll);
     return 0;
 }
 
@@ -86,8 +86,7 @@ int main(int argc, char **argv) {
     char *result = all_tests();
     if (result != 0) {
         printf("%s\n", result);
-    }
-    else {
+    } else {
         printf("ALL TESTS PASSED\n");
     }
     printf("Tests run: %d\n", tests_run);
