@@ -2,7 +2,6 @@
  * Encoder for the nand2tetris assembler.
  * @author Jesse Evers
  * @email jesse27999@gmail.com
- * @created 5/24/19
  */
 
 #include <stdio.h>
@@ -37,7 +36,7 @@ const char *DESTINATION_CODES[] = {
 	"111\0"
 };
 
-const char *COMPUTATIONS[][2] = {
+const char *COMPUTATIONS[][4] = {
     {"0\0"},
 	{"1\0"},
 	{"-1\0"},
@@ -47,17 +46,17 @@ const char *COMPUTATIONS[][2] = {
 	{"!A\0", "!M\0"},
 	{"-D\0"},
 	{"-A\0", "-M\0"},
-	{"D+1\0"},
-    {"A+1\0", "M+1\0"},
+	{"D+1\0", "1+D\0"},
+    {"A+1\0", "1+A\0", "M+1\0", "1+M\0"},
 	{"D-1\0"},
 	{"A-1\0", "M-1\0"},
-	{"D+A\0", "D+M\0"},
+	{"D+A\0", "A+D\0", "D+M\0", "M+D\0"},
 	{"D-A\0", "D-M\0"},
 	{"A-D\0", "M-D\0"},
-    {"D&A\0", "D&M\0"},
-	{"D|A\0", "D|M\0"}
+    {"D&A\0", "A&D\0", "D&M\0", "M&D\0"},
+	{"D|A\0", "A|D\0", "D|M\0", "M|D\0"}
 };
-int COMPUTATION_LENGTHS[18] = {1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 2, 2, 2, 2, 2};
+int COMPUTATION_LENGTHS[18] = {1, 1, 1, 1, 2, 1, 2, 1, 2, 2, 4, 1, 2, 4, 2, 2, 4, 4};
 const char *COMPUTATION_CODES[] = {
     "101010\0",
 	"111111\0",
@@ -103,7 +102,7 @@ const char **jump_codes = DESTINATION_CODES;
  */
 const char *encode_dest(char *dest_str) {
     if (!dest_str) {
-        return "000";
+        return "000\0";
     }
 
     for (int i = 0; i < sizeof(DESTINATION_LENGTHS) / sizeof(int); i++) {
@@ -143,7 +142,7 @@ char *encode_comp(char *comp_str) {
 		// depending on the value of comp_type)
         for (int j = 0; j < len; j++) {
             if (!strcmp(comp_str, comps_to_match[j])) {
-				// Add two extra chars for comp_type and the null terminator
+				// Copy starting one character into the string to account for comp_type
                 strcpy(comp + 1, COMPUTATION_CODES[i]);
                 comp[strlen(comp)] = '\0';
                 break;
@@ -167,7 +166,7 @@ char *encode_comp(char *comp_str) {
  */
 const char *encode_jump(char *jump_str) {
     if (!jump_str) {
-        return "000";
+        return "000\0";
     }
 
     for (int i = 0; i < NUM_JUMP_TYPES; i++) {

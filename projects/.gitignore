@@ -1,5 +1,6 @@
 *.gch
 *.o
 /06/assembler/assembler
+/06/assembler/test
 */**/build/
-.hack
+*/**/*.hack

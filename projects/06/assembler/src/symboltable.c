@@ -2,7 +2,6 @@
  * Symbol table generator for the nand2tetris assembler.
  * @author Jesse Evers
  * @email jesse27999@gmail.com
- * @created 6/3/19
  */
 
 #include "../hashtable/src/hash_table.h"
