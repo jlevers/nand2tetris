@@ -35,8 +35,8 @@ int ll_remove(ll_node**, const char*);
 void ll_delete(ll_node**);
 
 /* Hash table functions */
-const unsigned long long fnv1a(const char*);
-ht_hash_table *ht_new(const int);
+unsigned long long fnv1a(const char*);
+ht_hash_table *ht_new(int);
 void ht_insert(ht_hash_table*, const char*, const char*);
 char *ht_search(ht_hash_table*, const char*);
 void ht_remove(ht_hash_table*, const char*);

@@ -105,7 +105,7 @@ const char *encode_dest(char *dest_str) {
         return "000\0";
     }
 
-    for (int i = 0; i < sizeof(DESTINATION_LENGTHS) / sizeof(int); i++) {
+    for (unsigned int i = 0; i < sizeof(DESTINATION_LENGTHS) / sizeof(int); i++) {
         const char **dests_to_match = DESTINATIONS[i];
         int len = DESTINATION_LENGTHS[i];
         for (int j = 0; j < len; j++) {
@@ -135,7 +135,7 @@ char *encode_comp(char *comp_str) {
 	comp[0] = comp_type;
 
 	// Iterate over list of all possible computations
-    for (int i = 0; i < sizeof(COMPUTATION_LENGTHS) / sizeof(int); i++) {
+    for (unsigned int i = 0; i < sizeof(COMPUTATION_LENGTHS) / sizeof(int); i++) {
         const char **comps_to_match = COMPUTATIONS[i];
         int len = COMPUTATION_LENGTHS[i];
 		// Iterate over meanings of this command (a command can have two different meanings

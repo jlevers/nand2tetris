@@ -12,7 +12,6 @@
 #include "../hashtable/src/hash_table.h"
 
 int main(int argc, char *argv[]) {
-    setbuf(stdout, NULL);
     if (argc != 2) {
         printf("Usage: ./assembler path/to/prog.asm");
         return EXIT_FAILURE;

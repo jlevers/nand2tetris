@@ -47,7 +47,7 @@ ll_node *ll_new() {
  * @param  value the value to add to the linked list
  * @return       a pointer to the new head of the linked list
  */
-ll_node *ll_insert(struct ll_node *list, const char *key, const char *value) {
+ll_node *ll_insert(ll_node *list, const char *key, const char *value) {
     ll_node *new_node = calloc(1, sizeof(ll_node));
     new_node->value = ht_new_item(key, value);
     new_node->next = list;
@@ -61,11 +61,11 @@ ll_node *ll_insert(struct ll_node *list, const char *key, const char *value) {
  * @param  prev    the last linked list node that was recursed over
  * @return         the corresponding value to `key`, or NULL
  */
-static char *ll_search_recur(const char *key, ll_node *current, ll_node *prev) {
+static char *ll_search_recur(const char *key, const ll_node *current, const ll_node *prev) {
     if (current == &LL_SENTINEL) {
         return NULL;
     } else if (!strcmp(current->value->key, key)) {
-        return current->value->value;
+        return strdup(current->value->value);
     } else {
         return ll_search_recur(key, current->next, current);
     }
@@ -129,7 +129,7 @@ void ll_delete(ll_node **node) {
  * @param  input the value to hash
  * @return       the hashed value of the input
  */
-const unsigned long long fnv1a(const char *input) {
+unsigned long long fnv1a(const char *input) {
     unsigned long long hash = HT_FNV_OFFSET_BASIS;
     for (int i = 0; i < strlen(input); i++) {
         hash ^= (int)input[i];
@@ -138,7 +138,7 @@ const unsigned long long fnv1a(const char *input) {
     return hash;
 }
 
-static const unsigned long long ht_hash(const char *input, const int size) {
+static unsigned long long ht_hash(const char *input, const int size) {
     return fnv1a(input) % size;
 }
 

@@ -227,7 +227,7 @@ char *parse_comp(const char *command) {
     int start_comp_idx = 0;
     int end_comp_idx = 0;
 
-    int i = 0;
+    unsigned int i = 0;
     for (; i < strlen(command); i++) {
         if (command[i] == ASSIGN) {
             start_comp_idx = i + 1;
