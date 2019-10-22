@@ -20,8 +20,10 @@ static char *test_ll() {
     mu_assert("second value of linked list should be \"def\"", !strcmp(ll->next->value->value, "def"));
 
     // Test ll_search()
-    mu_assert("linked list should contain key \"abc\"", !strcmp(ll_search(ll, "abc"), "def"));
+    char *abc = ll_search(ll, "abc");
+    mu_assert("linked list should contain key \"abc\"", !strcmp(abc, "def"));
     mu_assert("linked list should not contain key \"test\"", ll_search(ll, "test") == NULL);
+    free(abc);
 
     // Test ll_remove()
     ll_remove(&ll, "abc");
@@ -55,10 +57,16 @@ static char *test_ht() {
     mu_assert("hash table count should be 3", ht->count == 3);
 
     // Test ht_search()
+    char *ht_search_abc = ht_search(ht, "abc");
+    char *ht_search_123 = ht_search(ht, "123");
+    char *ht_search_qwer = ht_search(ht, "qwer");
     mu_assert("hash table search should not find value for key \"foo\"", ht_search(ht, "foo") == NULL);
-    mu_assert("hash table search should find value \"def\" for key \"abc\"", !strcmp(ht_search(ht, "abc"), "def"));
-    mu_assert("hash table search should find value \"456\" for key \"123\"", !strcmp(ht_search(ht, "123"), "456"));
-    mu_assert("hash table search should find value \"tyuiop\" for key \"qwer\"", !strcmp(ht_search(ht, "qwer"), "tyuiop"));
+    mu_assert("hash table search should find value \"def\" for key \"abc\"", !strcmp(ht_search_abc, "def"));
+    mu_assert("hash table search should find value \"456\" for key \"123\"", !strcmp(ht_search_123, "456"));
+    mu_assert("hash table search should find value \"tyuiop\" for key \"qwer\"", !strcmp(ht_search_qwer, "tyuiop"));
+    free(ht_search_abc);
+    free(ht_search_123);
+    free(ht_search_qwer);
 
     // Test ht_remove()
     ht_remove(ht, "abc");

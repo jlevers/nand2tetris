@@ -403,7 +403,6 @@ void second_pass(FILE *in, FILE *out, ht_hash_table *ht) {
         } else if (cmd_type == A_COMMAND) {  // Convert the input to an address
             char *parsed = parse_symbol(cmd_type, command);
             char *binary_addr = NULL;
-            int from_symbol_table = 0;
 
             char zero = '0';
             char nine = '9';
@@ -416,18 +415,16 @@ void second_pass(FILE *in, FILE *out, ht_hash_table *ht) {
                     binary_addr = parse_to_binary(addr_RAM);
                     ht_insert(ht, parsed, binary_addr);
                     addr_RAM++;
-                } else {
-                    from_symbol_table = 1;
                 }
             } else {
                 binary_addr = parse_to_binary(atoi(command + 1));
             }
 
             strcpy(cmd_out, binary_addr);
-            // Don't free binary_addr if we retrieved it from the symbol table, because we'd be
-            // deleting it from the symbol table
-            if (!from_symbol_table) free(binary_addr);
+            free(binary_addr);
             free(parsed);
+            binary_addr = NULL;
+            parsed = NULL;
         } else {
             goto cleanup;
         }

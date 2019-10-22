@@ -12,6 +12,11 @@
 
 int tests_run = 0;
 
+void reinit_char(char **to_process) {
+    free(*to_process);
+    *to_process = NULL;
+}
+
 // Test encoder.c
 static char *test_encoder() {
     // Test encode_dest()
@@ -135,43 +140,43 @@ static char *test_encoder() {
     mu_assert("computation D|M does not encode to 1010101\0", !strcmp(comp_d_or_m, "1010101\0"));
     mu_assert("computations D|M and M|D do not encode to the same thing\0",
         !strcmp(comp_d_or_m, comp_m_or_d));
-    free(comp_0);
-    free(comp_1);
-    free(comp_neg_1);
-    free(comp_d);
-    free(comp_a);
-    free(comp_m);
-    free(comp_not_d);
-    free(comp_not_a);
-    free(comp_not_m);
-    free(comp_neg_d);
-    free(comp_neg_a);
-    free(comp_neg_m);
-    free(comp_d_plus_1);
-    free(comp_1_plus_d);
-    free(comp_a_plus_1);
-    free(comp_1_plus_a);
-    free(comp_m_plus_1);
-    free(comp_1_plus_m);
-    free(comp_d_min_1);
-    free(comp_a_min_1);
-    free(comp_m_min_1);
-    free(comp_d_plus_a);
-    free(comp_a_plus_d);
-    free(comp_d_plus_m);
-    free(comp_m_plus_d);
-    free(comp_d_min_a);
-    free(comp_d_min_m);
-    free(comp_a_min_d);
-    free(comp_m_min_d);
-    free(comp_d_and_a);
-    free(comp_a_and_d);
-    free(comp_d_and_m);
-    free(comp_m_and_d);
-    free(comp_d_or_a);
-    free(comp_a_or_d);
-    free(comp_d_or_m);
-    free(comp_m_or_d);
+    reinit_char(&comp_0);
+    reinit_char(&comp_1);
+    reinit_char(&comp_neg_1);
+    reinit_char(&comp_d);
+    reinit_char(&comp_a);
+    reinit_char(&comp_m);
+    reinit_char(&comp_not_d);
+    reinit_char(&comp_not_a);
+    reinit_char(&comp_not_m);
+    reinit_char(&comp_neg_d);
+    reinit_char(&comp_neg_a);
+    reinit_char(&comp_neg_m);
+    reinit_char(&comp_d_plus_1);
+    reinit_char(&comp_1_plus_d);
+    reinit_char(&comp_a_plus_1);
+    reinit_char(&comp_1_plus_a);
+    reinit_char(&comp_m_plus_1);
+    reinit_char(&comp_1_plus_m);
+    reinit_char(&comp_d_min_1);
+    reinit_char(&comp_a_min_1);
+    reinit_char(&comp_m_min_1);
+    reinit_char(&comp_d_plus_a);
+    reinit_char(&comp_a_plus_d);
+    reinit_char(&comp_d_plus_m);
+    reinit_char(&comp_m_plus_d);
+    reinit_char(&comp_d_min_a);
+    reinit_char(&comp_d_min_m);
+    reinit_char(&comp_a_min_d);
+    reinit_char(&comp_m_min_d);
+    reinit_char(&comp_d_and_a);
+    reinit_char(&comp_a_and_d);
+    reinit_char(&comp_d_and_m);
+    reinit_char(&comp_m_and_d);
+    reinit_char(&comp_d_or_a);
+    reinit_char(&comp_a_or_d);
+    reinit_char(&comp_d_or_m);
+    reinit_char(&comp_m_or_d);
 
 
     // Test encode_jump()
@@ -271,6 +276,30 @@ static char *test_symbol_table() {
     mu_assert("KBD is not in initial symbol table\0", kbd != NULL);
     mu_assert("symbol table has incorrect address for symbol KBD\0", !strcmp(kbd, "0110000000000000\0"));
 
+    reinit_char(&sp);
+    reinit_char(&lcl);
+    reinit_char(&arg);
+    reinit_char(&ths);
+    reinit_char(&that);
+    reinit_char(&r0);
+    reinit_char(&r1);
+    reinit_char(&r2);
+    reinit_char(&r3);
+    reinit_char(&r4);
+    reinit_char(&r5);
+    reinit_char(&r6);
+    reinit_char(&r7);
+    reinit_char(&r8);
+    reinit_char(&r9);
+    reinit_char(&r10);
+    reinit_char(&r11);
+    reinit_char(&r12);
+    reinit_char(&r13);
+    reinit_char(&r14);
+    reinit_char(&r15);
+    reinit_char(&screen);
+    reinit_char(&kbd);
+
     ht_delete(ht);
 
     return 0;
@@ -282,11 +311,6 @@ int same_file(int fd1, int fd2) {
     if (fstat(fd1, &stat1) < 0) return -1;
     if (fstat(fd2, &stat2) < 0) return -1;
     return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino);
-}
-
-void reinit_char(char **to_process) {
-    free(*to_process);
-    *to_process = NULL;
 }
 
 static char *test_parser() {
@@ -471,6 +495,8 @@ static char *test_parser() {
     char *address = ht_search(ht, "address\0");
     mu_assert("second pass failed to insert at least one symbol into the symbol table\0",
         !strcmp(counter, "0000000000010000\0") && !strcmp(address, "0000000000010001\0"));
+    reinit_char(&counter);
+    reinit_char(&address);
 
     fclose(fp_files.in);
     fclose(fp_files.out);
