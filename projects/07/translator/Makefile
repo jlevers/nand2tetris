@@ -1,0 +1,24 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -Werror -g -fsanitize=undefined
+OBJFILES := parser.o code_writer.o
+OBJDIR := build
+SRCDIR := src
+OBJS := $(addprefix $(OBJDIR)/,$(OBJFILES))
+SRC := $(addprefix $(SRCDIR)/,$(OBJFILES:.o=.c))
+TARGET := assembler
+
+$(TARGET): $(OBJS) $(OBJDIR)/main.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+.PHONY: test clean
+
+test: $(OBJS)
+	$(CC) $(CFLAGS) -c -o $(OBJDIR)/test.o $(SRCDIR)/test.c
+	$(CC) $(CFLAGS) $(OBJDIR)/test.o $(SRC) -o $@
+	./$@
+
+clean:
+	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) test
