@@ -2,5 +2,7 @@
 *.o
 /06/assembler/assembler
 /06/assembler/test
+/07/translator/translator
+/07/translator/test
 */**/build/
 */**/*.hack
