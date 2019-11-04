@@ -21,6 +21,23 @@ typedef struct io {
     FILE *out;
 } io;
 
+extern const char *FOUT_EXT;  // The file extension to use for outputted files
+
+// All "commands" discussed below are .asm-style commands
+extern const char BEGIN_COMMENT;  // The char that designates the beginning of a comment
+extern const char A_CMD_BEGIN;    // The char that designates the beginning of an A_COMMAND
+extern const char L_CMD_BEGIN;    // The char that designates the beginning of an L_COMMAND
+extern const char ASSIGN;         // The char that indicates assignment
+extern const char SEP;            // The char that separates the computation and jump portions of a command
+extern const char EOL;            // The char that designates the end of a line
+
+extern const int MAX_DEST_LEN;  // The length of the longest possible destination command
+extern const int MAX_COMP_LEN;  // The length of the longest possible computation command
+extern const int JMP_LEN;       // The length of a jump command
+
+extern const int WORD;  // The length of a binary word in the output file
+
+
 io init(const char*);
 char *advance(FILE*);
 command_t command_type(const char*);
