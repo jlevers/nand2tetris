@@ -30,7 +30,7 @@ int same_file(int fd1, int fd2) {
 static char *test_parser() {
     // Test Parser()
     char *fin_name = "./src/test/Test.vm";
-    FILE *parser_in = VMParser(fin_name);
+    FILE *parser_in = VM_Parser(fin_name);
     mu_assert("parser_new does not correctly open input file",
         same_file(fileno(parser_in), open(fin_name, 'r')));
 

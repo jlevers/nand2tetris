@@ -32,7 +32,7 @@ const int SHORTEST_CMD_LEN = 2;
  * @return          The file handler pointer for the .vm file.
  */
 
-FILE *VMParser(char *input_path) {
+FILE *VM_Parser(char *input_path) {
     FILE *input = fopen(input_path, "r");
 
     if (!input) {
