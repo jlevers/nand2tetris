@@ -153,6 +153,19 @@ static char *test_parser() {
 }
 
 static char* test_code_writer() {
+    // Test VM_Code_Writer()
+    char *file_input_path = "./src/test/Test.vm";
+    FILE *file_output_file = VM_Code_Writer(file_input_path);
+    mu_assert("VM_Code_Writer did not open the correct output file given an file path as input",
+        same_file(fileno(file_output_file), open("./src/test/Test.asm", 'r')));
+    fclose(file_output_file);
+
+    char *folder_input_path = "./src/test/Test/";
+    FILE *folder_output_file = VM_Code_Writer(folder_input_path);
+    mu_assert("VM_Code_Writer did not open the correct output file given a folder path as input",
+        same_file(fileno(folder_output_file), open("./src/test/Test.asm", 'r')));
+    fclose(folder_output_file);
+
     return 0;
 }
 

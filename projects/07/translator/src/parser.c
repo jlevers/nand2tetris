@@ -28,8 +28,9 @@ const int SHORTEST_CMD_LEN = 2;
 
 /**
  * Opens the .vm file for processing.
- * @param  filename The path to the .vm file to process.
- * @return          The file handler pointer for the .vm file.
+ *
+ * @param  char*  input_path The path to the .vm file to process
+ * @return FILE*             The file handler pointer for the .vm file
  */
 
 FILE *VM_Parser(char *input_path) {
@@ -45,8 +46,9 @@ FILE *VM_Parser(char *input_path) {
 
 /**
  * Gets the next line of the .vm file being parsed.
- * @param  file  The file to get the next line of.
- * @return The next line of the file.
+ *
+ * @param  FILE*  file  The file to get the next line of
+ * @return char*        The next line of the file
  */
 char *vm_advance(FILE *file) {
     int c = 0;
@@ -120,8 +122,9 @@ char *vm_advance(FILE *file) {
 
 /**
  * Determines the command type of @command.
- * @param  command The command to determine the type of.
- * @return         The command type (one of the enum type vm_command_t)
+ *
+ * @param  char*  command  The command to determine the type of
+ * @return vm_command_t    The command type
  */
 vm_command_t vm_command_type(char *line) {
     unsigned int i = 0;
@@ -171,8 +174,8 @@ vm_command_t vm_command_type(char *line) {
  * ("add", "sub", etc.) is returned. Should not be called for C_RETURN. If given an invalid command
  * type, returns NULL.
  *
- * @param char*  line  The line from the VM program
- * @return             The first argument, or NULL if an invalid command type is given
+ * @param  char*  line  The line from the VM program
+ * @return char*        The first argument, or NULL if an invalid command type is given
 */
 char *vm_arg1(char *line) {
     vm_command_t cmd_type = vm_command_type(line);
@@ -206,8 +209,8 @@ char *vm_arg1(char *line) {
  * Returns the second argument of the current command. Should be called only if the current command
  * is C_PUSH, C_POP, C_FUNCTION, or C_CALL. If called on an invalid command type, returns -1.
  *
- * @param  line  The VM program line to parse the second argument out of
- * @return       The second argument, or -1 if the second argument doesn't exist
+ * @param  char*  line  The VM program line to parse the second argument out of
+ * @return int          The second argument, or -1 if the second argument doesn't exist
  */
 int vm_arg2(char *line) {
     vm_command_t cmd_type = vm_command_type(line);

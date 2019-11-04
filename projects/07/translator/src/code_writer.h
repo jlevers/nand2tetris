@@ -1,12 +1,16 @@
-#ifndef _VM_ENCODER_H
-#define _VM_ENCODER_H
+#ifndef _VM_CODE_WRITER_H
+#define _VM_CODE_WRITER_H
 
 #include <stdio.h>
 
-FILE* new_parser(char*);
-void set_filename(char*);
-void write_arithmetic(char*);
-void write_push_pop(char*);
-void close();
+
+extern const char* FOUT_EXT;  // The file extension for the output file
+extern const char DIR_SEP;    // The character used to separate directories in a file path 
+
+FILE* VM_Code_Writer(char*);
+void vm_set_filename(char*);
+void vm_write_arithmetic(char*);
+void vm_write_push_pop(char*);
+void vm_code_writer_close();
 
 #endif
