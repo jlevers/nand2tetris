@@ -16,11 +16,10 @@ typedef enum vm_command_t {
     C_CALL = 8
 } vm_command_t;
 
-FILE *Parser(char*);
-int has_more_commands();
+FILE *VMParser(char*);
 char *vm_advance(FILE*);
 vm_command_t vm_command_type(char*);
-char *arg1(char*);
-int arg2(char*);
+char *vm_arg1(char*);
+int vm_arg2(char*);
 
 #endif

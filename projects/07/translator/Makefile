@@ -5,7 +5,7 @@ OBJDIR := build
 SRCDIR := src
 OBJS := $(addprefix $(OBJDIR)/,$(OBJFILES))
 SRC := $(addprefix $(SRCDIR)/,$(OBJFILES:.o=.c))
-TARGET := assembler
+TARGET := translator
 
 $(TARGET): $(OBJS) $(OBJDIR)/main.o
 	$(CC) $(CFLAGS) -o $@ $^
