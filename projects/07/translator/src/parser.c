@@ -11,7 +11,7 @@
 const char BEGIN_COMMENT = '/';
 const char EOL = '\n';
 
-const char *ARITHMETIC_CMDS[9] = { "add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not" };
+const char *ARITHMETIC_CMDS[9] = {"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not"};
 const char *PUSH_CMD = "push";
 const char *POP_CMD = "pop";
 const char *LABEL_CMD = "label";
