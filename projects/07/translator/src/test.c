@@ -166,6 +166,43 @@ static char* test_code_writer() {
         same_file(fileno(folder_output_file), open("./src/test/Test.asm", 'r')));
     fclose(folder_output_file);
 
+
+    // Test vm_write_command()
+    mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_INVALID",
+        vm_write_command("asdf", C_INVALID) == WC_INVALID_CMD);
+    mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_PUSH with no arguments",
+        vm_write_command("push", C_PUSH) == WC_INVALID_CMD);
+    mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_POP with a negative index",
+        vm_write_command("pop local -1", C_POP) == WC_INVALID_CMD);
+    mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_PUSH command",
+        vm_write_command("push constant 2", C_PUSH) == WC_SUCCESS);
+    mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_POP command",
+        vm_write_command("pop local 1", C_POP) == WC_SUCCESS);
+    mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_ARITHMETIC command",
+        vm_write_command("add", C_ARITHMETIC) == WC_SUCCESS);
+    mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_LABEL",
+        vm_write_command("label test", C_LABEL) == WC_UNSUPPORTED_CMD);
+    mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_GOTO",
+        vm_write_command("goto func", C_GOTO) == WC_UNSUPPORTED_CMD);
+    mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_IF",
+        vm_write_command("if-goto end", C_IF) == WC_UNSUPPORTED_CMD);
+    mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_FUNCTION",
+        vm_write_command("function mult 2", C_FUNCTION) == WC_UNSUPPORTED_CMD);
+    mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_RETURN",
+        vm_write_command("return", C_RETURN) == WC_UNSUPPORTED_CMD);
+    mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_CALL",
+        vm_write_command("call mult 2", C_CALL) == WC_UNSUPPORTED_CMD);
+
+
+    // Test vm_translate_push()
+    const char *translate_push_general_3 = vm_translate_push(GENERAL, 3);
+    mu_assert("vm_translate_push did not return NULL when given memory segment SEG_INVALID",
+        vm_translate_push(SEG_INVALID, 2) == NULL);
+    mu_assert("vm_translate_push did not return the correct set of commands given index 1 of segment GENERAL",
+        !strcmp(translate_push_general_3, "@SP\nA=A+1\n@14\nD=M\n@SP\nM=D\n"));
+    mu_assert("vm_translate_push did not return NULL when given segment TEMP and an out-of-bounds index",
+        vm_translate_push(TEMP, 9) == NULL);
+
     return 0;
 }
 

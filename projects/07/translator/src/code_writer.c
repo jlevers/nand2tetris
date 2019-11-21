@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "code_writer.h"
+#include "parser.h"
 
 #ifndef _VM_CODE_WRITER_VARS
 #define _VM_CODE_WRITER_VARS
@@ -10,7 +12,138 @@
 const char* FOUT_EXT = ".asm";
 const char DIR_SEP = '/';
 
+const vm_mem_seg SP = {NULL, "SP", 0, 0};
+const vm_mem_seg LCL = {"local", "LCL", 1, 1};
+const vm_mem_seg ARG = {"argument", "ARG", 2, 2};
+const vm_mem_seg THIS = {"this", "THIS", 3, 3};
+const vm_mem_seg THAT = {"that", "THAT", 4, 4};
+const vm_mem_seg POINTER = {"pointer", NULL, 3, 4};
+const vm_mem_seg TEMP = {"temp", "TEMP", 5, 12};
+const vm_mem_seg GENERAL = {"general", NULL, 13, 15};
+const vm_mem_seg CONSTANT = {"constant", NULL, -1, -1};
+const vm_mem_seg STATIC = {"static", NULL, 16, 255};
+const vm_mem_seg STACK = {"stack", NULL, 256, 2047};
+const vm_mem_seg HEAP = {"heap", NULL, 2048, 16483};
+const vm_mem_seg MEMMAP_IO = {"io", NULL, 16384, 24575};
+const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
+
 #endif
+
+/* STATIC FUNCTIONS */
+
+/**
+ * Encodes the assembly commands needed to increment the stack pointer.
+ * 
+ * @return  char*  The assembly code to increment the stack pointer.
+ */
+static char *inc_sp() {
+    return "@SP\n"
+           "A=A+1\n";
+}
+
+
+/**
+ * Encodes the assembly commands needed to decrement the stack pointer.
+ * 
+ * @return  char*  The assembly code to decrement the stack pointer.
+ */
+// static char *dec_sp() {
+//     return "@SP\n"
+//            "A=A-1";
+// }
+
+
+/**
+ * Returns the vm_mem_seg corresponding to the text name of a memory segment.
+ * 
+ * @param  char*  segment  The segment for which to retrieve the corresponding vm_mem_seg
+ * @return vm_mem_seg      The corresponding vm_mem_seg
+ */
+static vm_mem_seg seg_to_vm_memseg(char *segment) {
+    if (!strcmp(segment, "local")) {
+        return LCL;
+    } else if (!strcmp(segment, "argument")) {
+        return ARG;
+    } else if (!strcmp(segment, "this")) {
+        return THIS;
+    } else if (!strcmp(segment, "that")) {
+        return THAT;
+    } else if (!strcmp(segment, "pointer")) {
+        return POINTER;
+    } else if (!strcmp(segment, "temp")) {
+        return TEMP;
+    } else if (!strcmp(segment, "general")) {
+        return GENERAL;
+    } else if (!strcmp(segment, "constant")) {
+        return CONSTANT;
+    } else if (!strcmp(segment, "static")) {
+        return STATIC;
+    } else if (!strcmp(segment, "stack")) {
+        return STACK;
+    } else if (!strcmp(segment, "heap")) {
+        return HEAP;
+    } else if (!strcmp(segment, "io")) {
+        return MEMMAP_IO;
+    } else {
+        return SEG_INVALID;
+    }
+}
+
+
+/**
+ * Compares two strings using strcmp, but also allows either string given to be NULL.
+ *
+ * 
+ * @param  char*  a  The first string to compare
+ * @param  char*  b  The second string to compare
+ * @return int       0 if the strings are equal, 1 if only one of them is NULL, and the value of
+ *                   strcmp(a, b) otherwise
+ */
+static int vm_strcmp(const char *a, const char *b) {
+    int diff;
+    if (a == NULL && b == NULL) {
+        diff = 0;
+    } else if (a == NULL || b == NULL) {
+        diff = 1;
+    } else {
+        diff = strcmp(a, b);
+    }
+
+    return diff;
+}
+
+
+/**
+ * Compares two vm_mem_seg structs.
+ * 
+ * @param  vm_mem_seg  a  The first vm_mem_seg to compare
+ * @param  vm_mem_seg  b  The second vm_mem_seg to compare
+ * @return int            1 if the a and be are equivalent, 0 otherwise
+ */
+static int segcmp(vm_mem_seg a, vm_mem_seg b) {
+    return !vm_strcmp(a.vm_name, b.vm_name) && !vm_strcmp(a.hack_name, b.hack_name)
+        && a.begin_addr == b.begin_addr && a.end_addr == b.end_addr;
+}
+
+
+/**
+ * Counts the number of digits in the given integer.
+ * 
+ * @param  int  num  The number whose number of digits is to be counted
+ * @return int       The number of digits in |num|
+ */
+static int num_digits(const int num) {
+    int copy = num;
+    int count = 0;
+    while (copy > 0) {
+        count++;
+        copy /= 10;
+    }
+    return count;
+}
+
+/* END STATIC FUNCTIONS */
+
 
 
 /**
@@ -87,9 +220,130 @@ FILE *VM_Code_Writer(char *input_path) {
     free(output_path);
 
     if (!out) {
-        perror("Failed to open VM output file");
+        perror("[ERR] Failed to open VM output file");
         return NULL;
     }
 
     return out;
+}
+
+
+/**
+ * Writes a VM command in .hack ASM format.
+ *
+ * @param  char*         command       The VM command to translate
+ * @param  vm_command_t  command_type  The command type of the VM command
+ * @return vm_wc_status                The status of the function
+ */
+vm_wc_status vm_write_command(char *command, vm_command_t command_type) {
+    vm_wc_status status = WC_SUCCESS;
+
+    if (command_type == C_PUSH || command_type == C_POP) {
+        char *segment = vm_arg1(command);
+        int index = vm_arg2(command);
+        if (segment != NULL && strlen(segment) && index > -1) {
+            vm_mem_seg seg = seg_to_vm_memseg(segment);
+            if (command_type == C_PUSH) {
+                vm_translate_push(seg, index);
+            } else if (command_type == C_POP) {
+                vm_translate_pop(seg, index);
+            }
+            free(segment);
+            segment = NULL;
+        } else {
+            const char *err = "[ERR] Result of calling vm_arg1() on command \"%s\" was NULL. "
+                              "Cannot translate command\n";
+            printf(err, command);
+            status = WC_INVALID_CMD;
+        }
+    } else if (command_type == C_ARITHMETIC) {
+        vm_translate_arithmetic(command);
+    } else if (command_type == C_INVALID) {
+        printf("[ERR] Invalid command %s\n", command);
+        status = WC_INVALID_CMD;
+    } else {
+        printf("[ERR] Command type %d is not currently supported.\n", command_type);
+        status = WC_UNSUPPORTED_CMD;
+    }
+
+    return status;
+}
+
+
+/**
+ * Encodes arithmetic VM operations as Hack assembly code.
+ *
+ * @param  char*  command  The arithmetic command to encode
+ * @return char*           The encoded version of |command|
+ */
+char *vm_translate_arithmetic(char *command) {
+    // Removes any extra whitespace, makes sure it's valid, etc.
+    char *cmd = vm_arg1(command);
+
+    if (!strcmp(cmd, "add")) {
+
+    } else if (!strcmp(cmd, "sub")) {
+
+    } else if (!strcmp(cmd, "neg")) {
+
+    } else if (!strcmp(cmd, "eq")) {
+
+    } else if (!strcmp(cmd, "gt")) {
+
+    } else if (!strcmp(cmd, "lt")) {
+
+    } else if (!strcmp(cmd, "and")) {
+
+    } else if (!strcmp(cmd, "or")) {
+
+    } else if (!strcmp(cmd, "not")) {
+
+    }
+
+    return NULL;
+}
+
+
+/**
+ * Generates
+ */
+char *vm_translate_push(vm_mem_seg segment, int index) {
+    char *push_encoded = NULL;
+
+    if (!segcmp(segment, SEG_INVALID)) {
+        char *increment_sp = inc_sp();
+
+        // The value to push onto the stack is the value starting at the index-th value in 
+        // the given segment
+        int real_mem_addr = index + segment.begin_addr;
+
+        // Validate the memory address
+        if (real_mem_addr < 0 || real_mem_addr > segment.end_addr) {
+            printf("[ERR] Invalid memory address %d\n", real_mem_addr);
+        } else {
+            char *push = calloc(10 + num_digits(real_mem_addr) + 1, sizeof(char));
+            sprintf(push,
+                    "@%d\n"                     // Get the value from the heap
+                    "D=M\n"
+                    "@SP\n"                     // Push it onto the stack
+                    "M=D\n",
+                    real_mem_addr);
+
+            // Construct the command
+            int encoded_cmd_len = strlen(increment_sp) + strlen(push) + 1;
+            push_encoded = calloc(encoded_cmd_len, sizeof(char));
+            push_encoded[encoded_cmd_len] = '\0';
+            strcat(push_encoded, increment_sp);
+            strcat(push_encoded, push);
+        }
+    } else {
+        printf("[ERR] Invalid memory segment %s\n", segment.vm_name);
+    }
+    return push_encoded;
+}
+
+
+char *vm_translate_pop(vm_mem_seg segment, int index) {
+    printf("%s %d\n", segment.vm_name, index);
+    return NULL;
 }

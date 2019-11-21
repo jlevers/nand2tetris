@@ -30,7 +30,10 @@ extern const char *IF_CMD;
 extern const char *FUNCTION_CMD;
 extern const char *CALL_CMD;
 extern const char *RETURN_CMD;
+
+extern const int ARITHMETIC_CMDS_NUM_ARGS[9];
 extern const int SHORTEST_CMD_LEN;
+
 
 
 FILE *VM_Parser(char*);

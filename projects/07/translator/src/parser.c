@@ -21,6 +21,7 @@ const char *FUNCTION_CMD = "function";
 const char *CALL_CMD = "call";
 const char *RETURN_CMD = "return";
 
+const int ARITHMETIC_CMDS_NUM_ARGS[9] = {2, 2, 1, 2, 2, 2, 2, 2, 1};
 const int SHORTEST_CMD_LEN = 2;
 
 #endif
