@@ -160,10 +160,10 @@ static char* test_code_writer() {
         same_file(fileno(file_output_file), open("./src/test/Test.asm", 'r')));
     fclose(file_output_file);
 
-    char *folder_input_path = "./src/test/Test/";
+    char *folder_input_path = "./src/test/TestDir/";
     FILE *folder_output_file = VM_Code_Writer(folder_input_path);
     mu_assert("VM_Code_Writer did not open the correct output file given a folder path as input",
-        same_file(fileno(folder_output_file), open("./src/test/Test.asm", 'r')));
+        same_file(fileno(folder_output_file), open("./src/test/TestDir.asm", 'r')));
     fclose(folder_output_file);
 
 
@@ -195,13 +195,20 @@ static char* test_code_writer() {
 
 
     // Test vm_translate_push()
-    const char *translate_push_general_3 = vm_translate_push(GENERAL, 3);
+    // const char *translate_push_temp_3 = vm_translate_push(TEMP, 3);
+    char *translate_push_constant_59 = vm_translate_push(CONSTANT, 59);
+
     mu_assert("vm_translate_push did not return NULL when given memory segment SEG_INVALID",
         vm_translate_push(SEG_INVALID, 2) == NULL);
-    mu_assert("vm_translate_push did not return the correct set of commands given index 1 of segment GENERAL",
-        !strcmp(translate_push_general_3, "@SP\nA=A+1\n@14\nD=M\n@SP\nM=D\n"));
+    mu_assert("vm_translate_push did not return the correct set of commands given index 59 of segment CONSTANT",
+        !strcmp(translate_push_constant_59, "@SP\nA=A+1\nD=59\n@SP\nM=D\n"));
+    // mu_assert("vm_translate_push did not return the correct set of commands given index 3 of segment TEMP",
+    //     !strcmp(translate_push_temp_3, "@SP\nA=A+1\n@8\nD=M\n@SP\nM=D\n"));
+    mu_assert("vm_translate_push did not return NULL when given segment TEMP", vm_translate_push(TEMP, 3) == NULL);
     mu_assert("vm_translate_push did not return NULL when given segment TEMP and an out-of-bounds index",
         vm_translate_push(TEMP, 9) == NULL);
+
+    reinit_char(&translate_push_constant_59);
 
     return 0;
 }

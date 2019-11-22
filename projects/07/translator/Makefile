@@ -21,4 +21,4 @@ test: $(OBJS)
 	./$@
 
 clean:
-	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) test
+	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) test ./**/*.asm

@@ -20,7 +20,9 @@ const vm_mem_seg THAT = {"that", "THAT", 4, 4};
 const vm_mem_seg POINTER = {"pointer", NULL, 3, 4};
 const vm_mem_seg TEMP = {"temp", "TEMP", 5, 12};
 const vm_mem_seg GENERAL = {"general", NULL, 13, 15};
-const vm_mem_seg CONSTANT = {"constant", NULL, -1, -1};
+// This segment doesn't actually reference the entire memory, but saying that it does
+// makes some math in vm_translate_push work nicely.
+const vm_mem_seg CONSTANT = {"constant", NULL, 0, 32767};
 const vm_mem_seg STATIC = {"static", NULL, 16, 255};
 const vm_mem_seg STACK = {"stack", NULL, 256, 2047};
 const vm_mem_seg HEAP = {"heap", NULL, 2048, 16483};
@@ -142,6 +144,19 @@ static int num_digits(const int num) {
     return count;
 }
 
+
+/**
+ * Checks if the given path is a directory.
+ * 
+ * @param  char*  path  The path to check
+ * @return int          1 if the path is a directory, 0 otherwise
+ */
+static int is_directory(const char *path) {
+    struct stat path_stat;
+    stat(path, &path_stat);
+    return S_ISDIR(path_stat.st_mode);
+}
+
 /* END STATIC FUNCTIONS */
 
 
@@ -158,9 +173,8 @@ static int num_digits(const int num) {
  * @return FILE*              A file pointer to the output file
  */
 FILE *VM_Code_Writer(char *input_path) {
-    struct stat sb;
     // Check if input_path is a directory
-    int is_dir = stat(input_path, &sb) == 0 && S_ISDIR(sb.st_mode);
+    int is_dir = is_directory(input_path);
 
     // Make sure we ignore any trailing DIR_SEP (e.g., the last character of the path
     // "/with/trailing/slash/") if it exists
@@ -305,40 +319,53 @@ char *vm_translate_arithmetic(char *command) {
 
 
 /**
- * Generates
+ * Translates a VM push command into Hack assembly code.
+ * 
+ * @param  vm_mem_seg  segment  The segment that data is being pushed from
+ * @param  int         index    The index in the segment to select data from
+ * @return char*                The translated assembly code
  */
 char *vm_translate_push(vm_mem_seg segment, int index) {
     char *push_encoded = NULL;
+    // The value to push onto the stack is the value starting at the index-th value in 
+    // the given segment
+    int mem_addr = index + segment.begin_addr;
 
-    if (!segcmp(segment, SEG_INVALID)) {
-        char *increment_sp = inc_sp();
-
-        // The value to push onto the stack is the value starting at the index-th value in 
-        // the given segment
-        int real_mem_addr = index + segment.begin_addr;
-
-        // Validate the memory address
-        if (real_mem_addr < 0 || real_mem_addr > segment.end_addr) {
-            printf("[ERR] Invalid memory address %d\n", real_mem_addr);
-        } else {
-            char *push = calloc(10 + num_digits(real_mem_addr) + 1, sizeof(char));
-            sprintf(push,
-                    "@%d\n"                     // Get the value from the heap
-                    "D=M\n"
-                    "@SP\n"                     // Push it onto the stack
-                    "M=D\n",
-                    real_mem_addr);
-
-            // Construct the command
-            int encoded_cmd_len = strlen(increment_sp) + strlen(push) + 1;
-            push_encoded = calloc(encoded_cmd_len, sizeof(char));
-            push_encoded[encoded_cmd_len] = '\0';
-            strcat(push_encoded, increment_sp);
-            strcat(push_encoded, push);
-        }
-    } else {
+    if (segcmp(segment, SEG_INVALID)) {
         printf("[ERR] Invalid memory segment %s\n", segment.vm_name);
+    // Validate the memory address
+    } else if (mem_addr < 0 || mem_addr > segment.end_addr) {
+        printf("[ERR] Invalid memory address %d in segment %s\n", mem_addr, segment.vm_name);
+    } else if (segcmp(segment, CONSTANT)) {
+        // To push a constant value onto the stack, we have to increment the stack pointer,
+        // store that value in D, and then put that value in the memory address pointed to by
+        // the stack pointer.
+
+        char *increment_sp = inc_sp();
+        char *push = calloc(11 + num_digits(mem_addr) + 1, sizeof(char));
+
+        sprintf(push,
+                "D=%d\n"
+                "@SP\n"
+                "M=D\n",
+                mem_addr);
+
+        // Construct the command
+        int encoded_cmd_len = strlen(increment_sp) + strlen(push) + 1;
+        push_encoded = calloc(encoded_cmd_len, sizeof(char));
+        push_encoded[encoded_cmd_len] = '\0';
+        strcat(push_encoded, increment_sp);
+        strcat(push_encoded, push);
+    } else {
+        printf("[ERR] Pushing from the segment %s is not yet supported\n", segment.vm_name);
+        // sprintf(push,
+        //         "@%d\n"                     // Get the value from the heap
+        //         "D=M\n"
+        //         "@SP\n"                     // Push it onto the stack
+        //         "M=D\n",
+        //         mem_addr);
     }
+
     return push_encoded;
 }
 
