@@ -1,6 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -g -fsanitize=undefined
-OBJFILES := parser.o code_writer.o
+CFLAGS = -Wall -Wextra -Werror -Wno-format-security -g -fsanitize=undefined
+LDLIBS = -lm -L../../lib/ -Wl,-rpath=../../lib/ -lhashtable -lmcheck
+OBJFILES := parser.o code_writer.o util.o
 OBJDIR := build
 SRCDIR := src
 OBJS := $(addprefix $(OBJDIR)/,$(OBJFILES))
@@ -21,4 +22,4 @@ test: $(OBJS)
 	./$@
 
 clean:
-	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) test ./**/*.asm
+	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) test $(SRCDIR)/test/**/*.asm

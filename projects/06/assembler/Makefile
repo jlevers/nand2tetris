@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -g -fsanitize=undefined
-LDLIBS = -lm -L./hashtable/ -Wl,-rpath=./hashtable/ -lhashtable -lmcheck
+LDLIBS = -lm -L../../lib/ -Wl,-rpath=../../lib/ -lhashtable -lmcheck
 OBJFILES := encoder.o parser.o symboltable.o
 OBJDIR := build
 SRCDIR := src
