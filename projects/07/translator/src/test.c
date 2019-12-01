@@ -158,40 +158,41 @@ static char* test_code_writer() {
     FILE *file_output_file = VM_Code_Writer(file_input_path);
     mu_assert("VM_Code_Writer did not open the correct output file given an file path as input",
         same_file(fileno(file_output_file), open("./src/test/Test.asm", 'r')));
-    fclose(file_output_file);
 
     char *folder_input_path = "./src/test/TestDir/";
     FILE *folder_output_file = VM_Code_Writer(folder_input_path);
     mu_assert("VM_Code_Writer did not open the correct output file given a folder path as input",
-        same_file(fileno(folder_output_file), open("./src/test/TestDir.asm", 'r')));
+        same_file(fileno(folder_output_file), open("./src/test/TestDir.asm", 'a')));
     fclose(folder_output_file);
 
 
     // Test vm_write_command()
     mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_INVALID",
-        vm_write_command("asdf", C_INVALID) == WC_INVALID_CMD);
+        vm_write_command("asdf", C_INVALID, file_output_file) == WC_INVALID_CMD);
     mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_PUSH with no arguments",
-        vm_write_command("push", C_PUSH) == WC_INVALID_CMD);
+        vm_write_command("push", C_PUSH, file_output_file) == WC_INVALID_CMD);
     mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_POP with a negative index",
-        vm_write_command("pop local -1", C_POP) == WC_INVALID_CMD);
+        vm_write_command("pop local -1", C_POP, file_output_file) == WC_INVALID_CMD);
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_PUSH command",
-        vm_write_command("push constant 2", C_PUSH) == WC_SUCCESS);
+        vm_write_command("push constant 2", C_PUSH, file_output_file) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_POP command",
-        vm_write_command("pop local 1", C_POP) == WC_SUCCESS);
+        vm_write_command("pop local 1", C_POP, file_output_file) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_ARITHMETIC command",
-        vm_write_command("add", C_ARITHMETIC) == WC_SUCCESS);
+        vm_write_command("add", C_ARITHMETIC, file_output_file) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_LABEL",
-        vm_write_command("label test", C_LABEL) == WC_UNSUPPORTED_CMD);
+        vm_write_command("label test", C_LABEL, file_output_file) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_GOTO",
-        vm_write_command("goto func", C_GOTO) == WC_UNSUPPORTED_CMD);
+        vm_write_command("goto func", C_GOTO, file_output_file) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_IF",
-        vm_write_command("if-goto end", C_IF) == WC_UNSUPPORTED_CMD);
+        vm_write_command("if-goto end", C_IF, file_output_file) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_FUNCTION",
-        vm_write_command("function mult 2", C_FUNCTION) == WC_UNSUPPORTED_CMD);
+        vm_write_command("function mult 2", C_FUNCTION, file_output_file) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_RETURN",
-        vm_write_command("return", C_RETURN) == WC_UNSUPPORTED_CMD);
+        vm_write_command("return", C_RETURN, file_output_file) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_CALL",
-        vm_write_command("call mult 2", C_CALL) == WC_UNSUPPORTED_CMD);
+        vm_write_command("call mult 2", C_CALL, file_output_file) == WC_UNSUPPORTED_CMD);
+
+    fclose(file_output_file);
 
 
     // Test vm_translate_push()
@@ -201,7 +202,14 @@ static char* test_code_writer() {
     mu_assert("vm_translate_push did not return NULL when given memory segment SEG_INVALID",
         vm_translate_push(SEG_INVALID, 2) == NULL);
     mu_assert("vm_translate_push did not return the correct set of commands given index 59 of segment CONSTANT",
-        !strcmp(translate_push_constant_59, "@SP\nA=A+1\nD=59\n@SP\nM=D\n"));
+        !strcmp(translate_push_constant_59,
+            "  @SP\n"
+            "  M=M+1\n"
+            "  @59\n"
+            "  D=A\n"
+            "  @SP\n"
+            "  A=M-1\n"
+            "  M=D\n"));
     // mu_assert("vm_translate_push did not return the correct set of commands given index 3 of segment TEMP",
     //     !strcmp(translate_push_temp_3, "@SP\nA=A+1\n@8\nD=M\n@SP\nM=D\n"));
     mu_assert("vm_translate_push did not return NULL when given segment TEMP", vm_translate_push(TEMP, 3) == NULL);
@@ -209,6 +217,59 @@ static char* test_code_writer() {
         vm_translate_push(TEMP, 9) == NULL);
 
     reinit_char(&translate_push_constant_59);
+
+
+    // Test vm_translate_arithmetic()
+    char *translate_add = vm_translate_arithmetic("add");
+    char *translate_sub = vm_translate_arithmetic("sub");
+    char *translate_neg = vm_translate_arithmetic("neg");
+    char *translate_eq = vm_translate_arithmetic("eq");
+    char *translate_gt = vm_translate_arithmetic("gt");
+    char *translate_lt = vm_translate_arithmetic("lt");
+    char *translate_and = vm_translate_arithmetic("and");
+    char *translate_or = vm_translate_arithmetic("or");
+    char *translate_not = vm_translate_arithmetic("not");
+    
+    mu_assert("vm_translate_arithmetic doesn't correctly encode the \"add\" command",
+        !strcmp(translate_add,
+            "(__ADD_OP)\n"
+            "  @SP\n"
+            "  A=M-1\n"
+            "  D=M\n"
+            "  @SP\n"
+            "  M=M-1\n"
+            "  @SP\n"
+            "  A=M-1\n"
+            "  D=D+M\n"
+            "  M=D\n"));
+    mu_assert("vm_translate_arithmetic doesn't correctly encode the \"sub\" command",
+        !strcmp(translate_sub,
+            "(__SUB_OP)\n"
+            "  @SP\n"
+            "  A=M-1\n"
+            "  D=M\n"
+            "  @SP\n"
+            "  M=M-1\n"
+            "  @SP\n"
+            "  A=M-1\n"
+            "  D=M-D\n"
+            "  M=D\n"));
+    mu_assert("vm_translate_arithmetic doesn't correctly encode the \"neg\" command",
+        !strcmp(translate_neg,
+            "(__NEG_OP)\n"
+            "  @SP\n"
+            "  A=M-1\n"
+            "  M=-M\n"));
+
+    reinit_char(&translate_add);
+    reinit_char(&translate_sub);
+    reinit_char(&translate_neg);
+    reinit_char(&translate_eq);
+    reinit_char(&translate_gt);
+    reinit_char(&translate_lt);
+    reinit_char(&translate_and);
+    reinit_char(&translate_or);
+    reinit_char(&translate_not);
 
     return 0;
 }
@@ -220,6 +281,7 @@ static char *all_tests() {
 }
 
 int main() {
+    printf("[TEST] BEGIN TESTING OUTPUT\n");
     char *result = all_tests();
     if (result != 0) {
         printf("%s\n", result);
@@ -227,6 +289,7 @@ int main() {
         printf("ALL TESTS PASSED\n");
     }
     printf("Tests run: %d\n", tests_run);
+    printf("[TEST] END TESTING OUTPUT\n");
 
     return result != 0;
 }

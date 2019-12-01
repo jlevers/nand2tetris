@@ -130,16 +130,19 @@ char *vm_advance(FILE *file) {
 vm_command_t vm_command_type(char *line) {
     unsigned int i = 0;
     for (; i < strlen(line); i++) {
-        if (line[i] == ' ') break;
+        if (line[i] == ' ') {
+            break;
+        }
     }
 
-    if ((int)i < SHORTEST_CMD_LEN) return C_INVALID;
+    if ((int)i < SHORTEST_CMD_LEN) {
+        return C_INVALID;
+    }
 
     // Copy the command from the VM program line given
-    char *cmd = calloc(i, sizeof(char));
-    cmd = strncpy(cmd, line, i);
-    cmd[i] = '\0';
-
+    char *cmd = calloc(i + 1, sizeof(char));
+    snprintf(cmd, i + 1, "%s", line);
+    
     vm_command_t cmd_type = C_INVALID;
 
     if (!strcmp(cmd, PUSH_CMD)) {
@@ -166,6 +169,8 @@ vm_command_t vm_command_type(char *line) {
         }
     }
 
+    free(cmd);
+
     return cmd_type;
 }
 
@@ -186,21 +191,24 @@ char *vm_arg1(char *line) {
     } else if (cmd_type == C_ARITHMETIC) {
         // Copy the original line to a new variable so that we don't return a direct pointer to the
         // `line` parameter
-        char *copy = calloc(strlen(line), sizeof(char));
-        strcpy(copy, line);
+        char *copy = calloc(strlen(line) + 1, sizeof(char));
+        snprintf(copy, strlen(line) + 1, "%s", line);
         return copy;
     }
 
     int i = 0;
-    while(line[i] != ' ') { i++; }
+    while(line[i] != ' ') {
+        i++;
+    }
     i++;
 
     int j = i;
-    while(j < (int)strlen(line) && line[j] != ' ') { j++; }
+    while(j < (int)strlen(line) && line[j] != ' ') {
+        j++;
+    }
 
     char *arg = calloc(j - i + 1, sizeof(char));
-    strncpy(arg, line + i, j - i);
-    arg[j - i] = '\0';
+    snprintf(arg, j - i + 1, "%s", line + i);
 
     return arg;
 }

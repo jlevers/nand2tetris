@@ -2,6 +2,7 @@
 #define _VM_CODE_WRITER_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "parser.h"
 
 
@@ -17,12 +18,14 @@ typedef struct vm_mem_seg {
 typedef enum vm_wc_status {
     WC_SUCCESS,
     WC_INVALID_CMD,
-    WC_UNSUPPORTED_CMD
+    WC_UNSUPPORTED_CMD,
+    WC_WRITE_FILE_ERR
 } vm_wc_status;
 
 
 extern const char* FOUT_EXT;  // The file extension for the output file
 extern const char DIR_SEP;    // The character used to separate directories in a file path
+
 
 // Predefined memory segments
 extern const vm_mem_seg SP;
@@ -41,12 +44,19 @@ extern const vm_mem_seg MEMMAP_IO;
 extern const vm_mem_seg SEG_INVALID;
 
 
+// .hack assembly snippets
+extern const char *INC_SP;
+extern const char *DEC_SP;
+extern const char *JMP_FLOW;
+extern const char *INF_LOOP_END;
+
+
 FILE* VM_Code_Writer(char*);
 void vm_set_filename(char*);
-vm_wc_status vm_write_command(char*, vm_command_t);
+vm_wc_status vm_write_command(char*, vm_command_t, FILE*);
 char *vm_translate_arithmetic(char*);
 char *vm_translate_push(vm_mem_seg, int);
 char *vm_translate_pop(vm_mem_seg, int);
-void vm_code_writer_close();
+void vm_code_writer_close(FILE*);
 
 #endif
