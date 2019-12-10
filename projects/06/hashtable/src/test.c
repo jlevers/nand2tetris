@@ -44,8 +44,8 @@ static char *test_ht() {
 
     // Test ht_new()
     ht_hash_table *ht = ht_new(2);
-    mu_assert("hashtable size should be 2", ht->size == 2);
-    mu_assert("hashtable count should be 0", ht->count == 0);
+    mu_assert("hashtable ht size should be 2", ht->size == 2);
+    mu_assert("hashtable ht count should be 2", ht->count == 0);
 
     // Test ht_insert()
     ht_insert(ht, "abc", "def");
@@ -56,26 +56,49 @@ static char *test_ht() {
     mu_assert("hash table should have key/value pair qwer:tyuiop", !strcmp(ht->nodes[0]->value->value, "tyuiop"));
     mu_assert("hash table count should be 3", ht->count == 3);
 
+    // Test ht_insert_all()
+    const char* keys1[] = {"initkey1", "initkey2", NULL};
+    const char* vals1[] = {"initval1", "initval2", NULL};
+    const char* keys2[] = {"no", NULL};
+    const char* vals2[] = {"sentinel"};
+    const char* keys3[] = {"different", "lengths", NULL};
+    const char* vals3[] = {"this", "one's", "longer", NULL};
+    ht_insert_all(ht, 2, keys1, vals1);
+    mu_assert("hash table should have key/value pair initkey1:initval1", !strcmp(ht->nodes[1]->value->value, "initval1"));
+    mu_assert("hash table should have key/value pair initkey1:initval1", !strcmp(ht->nodes[0]->value->value, "initval2"));
+    mu_assert("hash table count should be 5", ht->count == 5);
+    ht_insert_all(ht, 1, keys2, vals2);
+    mu_assert("hash table count should still be 5", ht->count == 5);
+    ht_insert_all(ht, 2, keys3, vals3);
+    mu_assert("hash table count should still be 5", ht->count == 5);
+
+
     // Test ht_search()
+    char *ht_search_init1 = ht_search(ht, "initkey1");
+    char *ht_search_init2 = ht_search(ht, "initkey2");
     char *ht_search_abc = ht_search(ht, "abc");
     char *ht_search_123 = ht_search(ht, "123");
     char *ht_search_qwer = ht_search(ht, "qwer");
     mu_assert("hash table search should not find value for key \"foo\"", ht_search(ht, "foo") == NULL);
+    mu_assert("hash table search should find value \"initval1\" for key \"initkey1\"", !strcmp(ht_search_init1, "initval1"));
+    mu_assert("hash table search should find value \"initval2\" for key \"initkey2\"", !strcmp(ht_search_init2, "initval2"));
     mu_assert("hash table search should find value \"def\" for key \"abc\"", !strcmp(ht_search_abc, "def"));
     mu_assert("hash table search should find value \"456\" for key \"123\"", !strcmp(ht_search_123, "456"));
     mu_assert("hash table search should find value \"tyuiop\" for key \"qwer\"", !strcmp(ht_search_qwer, "tyuiop"));
+    free(ht_search_init1);
+    free(ht_search_init2);
     free(ht_search_abc);
     free(ht_search_123);
     free(ht_search_qwer);
 
     // Test ht_remove()
     ht_remove(ht, "abc");
-    mu_assert("hash table should no longer contain key/value pair abc:def", ht->nodes[1]->next == &LL_SENTINEL);
+    mu_assert("hash table should no longer contain key/value pair abc:def", ht->nodes[1]->next->next == &LL_SENTINEL);
     ht_remove(ht, "qwer");
-    mu_assert("hash table should no longer contain key/value pair qwer:tyuiop", ht->nodes[0] == &LL_SENTINEL);
-    mu_assert("hash table count should be 1", ht->count == 1);
+    mu_assert("hash table should no longer contain key/value pair qwer:tyuiop", ht->nodes[0]->next == &LL_SENTINEL);
+    mu_assert("hash table count should be 3", ht->count == 3);
     ht_remove(ht, "foo");
-    mu_assert("hash table count should still be 1", ht->count == 1);
+    mu_assert("hash table count should still be 3", ht->count == 3);
 
     // Test ht_delete()
     // I'm really just testing this by making sure valgrind doesn't show a memory leak. I'm not sure
@@ -91,13 +114,19 @@ static char *all_tests() {
 }
 
 int main(int argc, char **argv) {
+    printf("[TEST] Begin test output\n");
+    printf("------------------------\n\n");
+
     char *result = all_tests();
     if (result != 0) {
-        printf("%s\n", result);
+        printf("[TEST] %s\n", result);
     } else {
-        printf("ALL TESTS PASSED\n");
+        printf("\n[TEST] ALL TESTS PASSED\n");
     }
-    printf("Tests run: %d\n", tests_run);
+
+    printf("[TEST] Tests run: %d\n", tests_run);
+    printf("\n----------------------\n");
+    printf("[TEST] End test output\n");
 
     return result != 0;
 }

@@ -1,1 +1,1 @@
-../../06/assembler/hashtable/src/hash_table.h
+/home/jesse/src/hubg/nand2tetris/projects/06/hashtable/src/hash_table.h

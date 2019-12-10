@@ -153,10 +153,30 @@ ht_hash_table *ht_new(const int size) {
     return ht;
 }
 
-void ht_insert(ht_hash_table* ht, const char *key, const char *val) {
+void ht_insert(ht_hash_table *ht, const char *key, const char *val) {
     unsigned long long hash = ht_hash(key, ht->size);
     ht->nodes[hash] = ll_insert(ht->nodes[hash], key, val);
     ht->count++;
+}
+
+void ht_insert_all(ht_hash_table *ht, int num_items, const char *keys[], const char *vals[]) {
+    const char *init_items_err =
+        "[ERR] The list of keys and the list of values supplied to ht_insert_all() must both be non-NULL and "
+        "both be the same length. %s, so no key-value pairs are being added to the hash table.\n";
+
+    // There will be a segfault caused by accessing an invalid array index if num_items is more than the number of key/value
+    // pairs given, or if different length key and value lists are given and num_items is the length of the longer one
+    if (keys == NULL || vals == NULL) {
+        printf(init_items_err, "Either the list of keys or the list of values was NULL");
+    } else if (keys[num_items] != NULL || vals[num_items] != NULL) {
+        printf(init_items_err,
+            "Either the list of keys and of values are different lengths, or one of the lists doesn't end "
+            "with a NULL sentinel value");
+    } else {
+        for (int i = 0; i < num_items; i++) {
+            ht_insert(ht, keys[i], vals[i]);
+        }
+    }
 }
 
 char *ht_search(ht_hash_table *ht, const char *key) {
