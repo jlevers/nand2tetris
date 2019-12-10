@@ -10,6 +10,7 @@ TARGET := libhashtable.so
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -shared -o $@ $^ -lm
 	cp libhashtable.so ../../lib/
+	cp src/hash_table.h ../../lib/
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -fpic -c -o $@ $<
