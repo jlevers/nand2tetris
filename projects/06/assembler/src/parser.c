@@ -12,7 +12,7 @@
 
 #include "encoder.h"
 #include "parser.h"
-#include "../hashtable/src/hash_table.h"
+#include "../../../lib/hash_table.h"
 
 #ifndef _PARSER_VARS
 #define _PARSER_VARS

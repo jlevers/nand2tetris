@@ -9,7 +9,7 @@
 
 #include "parser.h"
 #include "symboltable.h"
-#include "../hashtable/src/hash_table.h"
+#include "../../../lib/hash_table.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {

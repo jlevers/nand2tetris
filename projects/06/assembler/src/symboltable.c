@@ -4,7 +4,7 @@
  * @email jesse27999@gmail.com
  */
 
-#include "../hashtable/src/hash_table.h"
+#include "../../../lib/hash_table.h"
 #include "symboltable.h"
 
 ht_hash_table* constructor(int size) {

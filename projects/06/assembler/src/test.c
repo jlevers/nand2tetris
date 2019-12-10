@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 #include "encoder.h"
-#include "../hashtable/src/hash_table.h"
+#include "../../../lib/hash_table.h"
 #include "minunit.h"
 #include "parser.h"
 #include "symboltable.h"

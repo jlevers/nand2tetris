@@ -7,7 +7,7 @@
 #ifndef _SYMBOLTABLE_H
 #define _SYMBOLTABLE_H
 
-#include "../hashtable/src/hash_table.h"
+#include "../../../lib/hash_table.h"
 
 ht_hash_table* constructor(int);
 

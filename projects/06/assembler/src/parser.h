@@ -8,7 +8,7 @@
 #define _PARSER_H
 
 #include <stdio.h>
-#include "../hashtable/src/hash_table.h"
+#include "../../../lib/hash_table.h"
 
 typedef enum ct {
   A_COMMAND = 0,
