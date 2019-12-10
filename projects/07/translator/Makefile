@@ -9,7 +9,7 @@ SRC := $(addprefix $(SRCDIR)/,$(OBJFILES:.o=.c))
 TARGET := translator
 
 $(TARGET): $(OBJS) $(OBJDIR)/main.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -18,8 +18,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 
 test: $(OBJS)
 	$(CC) $(CFLAGS) -c -o $(OBJDIR)/test.o $(SRCDIR)/test.c
-	$(CC) $(CFLAGS) $(OBJDIR)/test.o $(SRC) -o $@
-	./$@
+	$(CC) $(CFLAGS) $(OBJDIR)/test.o $(SRC) -o $(OBJDIR)/$@ $(LDLIBS)
+	./$(OBJDIR)/$@
 
 clean:
-	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) test $(SRCDIR)/test/**/*.asm
+	rm -f $(OBJDIR)/*.o $(SRCDIR)/*.gch $(TARGET) $(SRCDIR)/test/**/*.asm
