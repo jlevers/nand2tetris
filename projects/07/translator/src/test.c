@@ -5,9 +5,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "code_writer.h"
 #include "minunit.h"
 #include "parser.h"
-#include "code_writer.h"
+#include "util.h"
 
 int tests_run = 0;
 
@@ -152,7 +153,7 @@ static char *test_parser() {
     return 0;
 }
 
-static char* test_code_writer() {
+static char *test_code_writer() {
     // Test VM_Code_Writer()
     char *file_input_path = "./src/test/Test.vm";
     FILE *file_output_file = VM_Code_Writer(file_input_path);
@@ -196,7 +197,6 @@ static char* test_code_writer() {
 
 
     // Test vm_translate_push()
-    // const char *translate_push_temp_3 = vm_translate_push(TEMP, 3);
     char *translate_push_constant_59 = vm_translate_push(CONSTANT, 59);
 
     mu_assert("vm_translate_push did not return NULL when given memory segment SEG_INVALID",
@@ -210,8 +210,6 @@ static char* test_code_writer() {
             "@SP\n"
             "A=M-1\n"
             "M=D\n"));
-    // mu_assert("vm_translate_push did not return the correct set of commands given index 3 of segment TEMP",
-        // !strcmp(translate_push_temp_3, "@SP\nA=A+1\n@8\nD=M\n@SP\nM=D\n"));
     mu_assert("vm_translate_push did not return NULL when given segment TEMP", vm_translate_push(TEMP, 3) == NULL);
     mu_assert("vm_translate_push did not return NULL when given segment TEMP and an out-of-bounds index",
         vm_translate_push(TEMP, 9) == NULL);
@@ -221,6 +219,7 @@ static char* test_code_writer() {
 
     // Test vm_translate_arithmetic()
     char *translate_add = vm_translate_arithmetic("add");
+    char *translate_eq = vm_translate_arithmetic("eq");
     mu_assert("vm_translate_arithmetic doesn't jump to the \"add\" command correctly",
         !strcmp(translate_add,
             "@POST_ARITH_CALL_1\n"
@@ -230,8 +229,47 @@ static char* test_code_writer() {
             "@__ADD_OP\n"
             "0;JMP\n"
             "(POST_ARITH_CALL_1)\n"));
+    mu_assert("vm_translate_arithmetic doesn't jump to the \"eq\" command correctly",
+        !strcmp(translate_eq,
+            "@POST_ARITH_CALL_2\n"
+            "D=A\n"
+            "@R13\n"
+            "M=D\n"
+            "@__EQ_OP\n"
+            "0;JMP\n"
+            "(POST_ARITH_CALL_2)\n"));
 
     reinit_char(&translate_add);
+    reinit_char(&translate_eq);
+
+    return 0;
+}
+
+static char *test_util() {
+    // Test is_directory()
+    mu_assert("is_directory says that ./src/test/ is not a directory", is_directory("./src/test/"));
+    mu_assert("is_directory says that ./src/test/Test.vm/ is a directory", !is_directory("./src/test/Test.vm"));
+
+    // Test toupper_str()
+    char *all_lower = calloc(5, sizeof(char));
+    char *mixed_case = calloc(7, sizeof(char));
+    all_lower = "abcd";
+    mixed_case = "4Daf!!";
+    char *lower_upper = calloc(strlen("abcd") + 1, sizeof(char));
+    char *mixed_upper = calloc(strlen("4Daf!!") + 1, sizeof(char));
+    toupper_str(lower_upper, all_lower);
+    toupper_str(mixed_upper, mixed_case);
+    mu_assert("toupper_str doesn't properly convert \"abcd\" to uppercase", !strcmp(lower_upper, "ABCD"));
+    mu_assert("toupper_str doesn't properly convert \"4Daf!!\" to uppercase", !strcmp(mixed_upper, "4DAF!!"));
+    reinit_char(&lower_upper);
+    reinit_char(&mixed_upper);
+
+    // Test num_digits()
+    mu_assert("num_digits says that 0 doesn't have 1 digit", num_digits(0) == 1);
+    mu_assert("num_digits says that 1 doesn't have 1 digit", num_digits(1) == 1);
+    mu_assert("num_digits says that -1 doesn't have 2 digits", num_digits(-1) == 2);
+    mu_assert("num_digits says that 3378 doesn't have 4 digits", num_digits(3378) == 4);
+    mu_assert("num_digits says that -1234556 doesn't have 8 digits", num_digits(-1234556) == 8);
 
     return 0;
 }
@@ -239,6 +277,7 @@ static char* test_code_writer() {
 static char *all_tests() {
     mu_run_test(test_parser);
     mu_run_test(test_code_writer);
+    mu_run_test(test_util);
     return 0;
 }
 
