@@ -203,15 +203,15 @@ static char* test_code_writer() {
         vm_translate_push(SEG_INVALID, 2) == NULL);
     mu_assert("vm_translate_push did not return the correct set of commands given index 59 of segment CONSTANT",
         !strcmp(translate_push_constant_59,
-            "  @SP\n"
-            "  M=M+1\n"
-            "  @59\n"
-            "  D=A\n"
-            "  @SP\n"
-            "  A=M-1\n"
-            "  M=D\n"));
+            "@SP\n"
+            "M=M+1\n"
+            "@59\n"
+            "D=A\n"
+            "@SP\n"
+            "A=M-1\n"
+            "M=D\n"));
     // mu_assert("vm_translate_push did not return the correct set of commands given index 3 of segment TEMP",
-    //     !strcmp(translate_push_temp_3, "@SP\nA=A+1\n@8\nD=M\n@SP\nM=D\n"));
+        // !strcmp(translate_push_temp_3, "@SP\nA=A+1\n@8\nD=M\n@SP\nM=D\n"));
     mu_assert("vm_translate_push did not return NULL when given segment TEMP", vm_translate_push(TEMP, 3) == NULL);
     mu_assert("vm_translate_push did not return NULL when given segment TEMP and an out-of-bounds index",
         vm_translate_push(TEMP, 9) == NULL);
@@ -221,55 +221,17 @@ static char* test_code_writer() {
 
     // Test vm_translate_arithmetic()
     char *translate_add = vm_translate_arithmetic("add");
-    char *translate_sub = vm_translate_arithmetic("sub");
-    char *translate_neg = vm_translate_arithmetic("neg");
-    char *translate_eq = vm_translate_arithmetic("eq");
-    char *translate_gt = vm_translate_arithmetic("gt");
-    char *translate_lt = vm_translate_arithmetic("lt");
-    char *translate_and = vm_translate_arithmetic("and");
-    char *translate_or = vm_translate_arithmetic("or");
-    char *translate_not = vm_translate_arithmetic("not");
-    
-    mu_assert("vm_translate_arithmetic doesn't correctly encode the \"add\" command",
+    mu_assert("vm_translate_arithmetic doesn't jump to the \"add\" command correctly",
         !strcmp(translate_add,
-            "(__ADD_OP)\n"
-            "  @SP\n"
-            "  A=M-1\n"
-            "  D=M\n"
-            "  @SP\n"
-            "  M=M-1\n"
-            "  @SP\n"
-            "  A=M-1\n"
-            "  D=D+M\n"
-            "  M=D\n"));
-    mu_assert("vm_translate_arithmetic doesn't correctly encode the \"sub\" command",
-        !strcmp(translate_sub,
-            "(__SUB_OP)\n"
-            "  @SP\n"
-            "  A=M-1\n"
-            "  D=M\n"
-            "  @SP\n"
-            "  M=M-1\n"
-            "  @SP\n"
-            "  A=M-1\n"
-            "  D=M-D\n"
-            "  M=D\n"));
-    mu_assert("vm_translate_arithmetic doesn't correctly encode the \"neg\" command",
-        !strcmp(translate_neg,
-            "(__NEG_OP)\n"
-            "  @SP\n"
-            "  A=M-1\n"
-            "  M=-M\n"));
+            "@POST_ARITH_CALL_1\n"
+            "D=A\n"
+            "@R13\n"
+            "M=D\n"
+            "@__ADD_OP\n"
+            "0;JMP\n"
+            "(POST_ARITH_CALL_1)\n"));
 
     reinit_char(&translate_add);
-    reinit_char(&translate_sub);
-    reinit_char(&translate_neg);
-    reinit_char(&translate_eq);
-    reinit_char(&translate_gt);
-    reinit_char(&translate_lt);
-    reinit_char(&translate_and);
-    reinit_char(&translate_or);
-    reinit_char(&translate_not);
 
     return 0;
 }
@@ -281,15 +243,19 @@ static char *all_tests() {
 }
 
 int main() {
-    printf("[TEST] BEGIN TESTING OUTPUT\n");
+    printf("[TEST] Begin test output\n");
+    printf("------------------------\n\n");
+
     char *result = all_tests();
     if (result != 0) {
-        printf("%s\n", result);
+        printf("[TEST] %s\n", result);
     } else {
-        printf("ALL TESTS PASSED\n");
+        printf("\n[TEST] ALL TESTS PASSED\n");
     }
-    printf("Tests run: %d\n", tests_run);
-    printf("[TEST] END TESTING OUTPUT\n");
+
+    printf("[TEST] Tests run: %d\n", tests_run);
+    printf("\n----------------------\n");
+    printf("[TEST] End test output\n");
 
     return result != 0;
 }

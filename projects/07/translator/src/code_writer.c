@@ -3,8 +3,19 @@
 #include <string.h>
 
 #include "code_writer.h"
+#include "../../../lib/hash_table.h"
 #include "parser.h"
 #include "util.h"
+
+
+/*
+ * NOTES
+ * -----
+ * For arithmetic operations, the address to jump to after completing the operation is stored in @R13.
+ * For true/false operations, the address to jump to after completing the operation is stored in @R14.
+ * All internal labels begin with a double underscore: __LABEL_NAME
+ */
+
 
 #ifndef _VM_CODE_WRITER_VARS
 #define _VM_CODE_WRITER_VARS
@@ -29,31 +40,109 @@ const vm_mem_seg HEAP = {"heap", NULL, 2048, 16483};
 const vm_mem_seg MEMMAP_IO = {"io", NULL, 16384, 24575};
 const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
 
-const char *INC_SP = "  @SP\n"
-                     "  M=M+1";
-const char *DEC_SP = "  @SP\n"
-                     "  M=M-1";
-const char *INIT_SP = "  @256\n"
-                      "  D=A\n"
-                      "  @SP\n"
-                      "  M=D";
-const char *INF_LOOP_END = "(INFINITE_LOOP)\n"
-                           "  @INFINITE_LOOP\n"
-                           "  0;JMP";
-const char *JMP_FLOW = "(__TRUE)\n"
-                       "  @SP\n"
-                       "  A=M-1\n"
-                       "  M=1\n"
-                       "  @__after_tf_jmp\n"
-                       "  0;JMP\n"
-                       "(__FALSE)\n"
-                       "  @SP\n"
-                       "  A=M-1\n"
-                       "  M=0\n"
-                       "  @__after_tf_jmp\n"
-                       "  0;JMP";
+const char *INIT_SP =
+    "// Initialize stack pointer\n"
+    "@256\n"
+    "D=A\n"
+    "@SP\n"
+    "M=D";
+
+const char *INF_LOOP =
+    "(__INFINITE_LOOP)\n"
+    "@__INFINITE_LOOP\n"
+    "0;JMP\n";
+
+const char *TF_FUNC =
+    "(__TRUE)\n"
+    "@SP\n"
+    "A=M-1\n"
+    "M=-1\n"
+    "@R14\n"
+    "A=M\n"
+    "0;JMP\n"
+    "(__FALSE)\n"
+    "@SP\n"
+    "A=M-1\n"
+    "M=0\n"
+    "@R14\n"
+    "A=M\n"
+    "0;JMP";
+
+const char *ARITH_OP_END =
+    "(__END_ARITH_OP)\n"
+    "@R13\n"
+    "A=M\n"
+    "0;JMP\n";
+
+/*
+ * All the following ARITH_<OPTYPE>_BASE_CMD constants are missing their function labels, which are generated
+ * in gen_arith_cmd() when the command is written to the end of the assembly file. Each base command contains a single
+ * format specifier in the place of a specific arithmetic operator, which will be filled in by gen_arith_cmd().
+ */
+const char *ARITH_ADDSUB_BASE_CMD =
+    "@SP\n"
+    "A=M-1\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M-1\n"
+    "A=M-1\n"
+    "D=M%sD\n"
+    "M=D\n"
+    "@__END_ARITH_OP\n"
+    "0;JMP\n";
+
+const char *ARITH_CMP_BASE_CMD =
+    "@SP\n"
+    "A=M-1\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M-1\n"
+    "A=M-1\n"
+    "M=M-D\n"
+    "@__END_ARITH_OP\n"
+    "D=A\n"
+    "@R14\n"
+    "M=D\n"
+    "@SP\n"
+    "A=M-1\n"
+    "D=M\n"
+    "@__TRUE\n"
+    "D;J%s\n"
+    "@__FALSE\n"
+    "0;JMP\n";
+
+const char *ARITH_BOOL_BASE_CMD =
+    "@SP\n"
+    "A=M-1\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M-1\n"
+    "A=M-1\n"
+    "M=M%sD\n"
+    "@__END_ARITH_OP\n"
+    "0;JMP\n";
+
+const char *ARITH_UNARY_BASE_CMD =
+    "@SP\n"
+    "A=M-1\n"
+    "M=%sM\n"
+    "@__END_ARITH_OP\n"
+    "0;JMP\n";
+
+const int NUM_ARITH_OPS = 9;
+const char *VM_OPS[] = {"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", NULL};
+const char *ASM_OPS[] = {"+", "-", "-", "EQ", "GT", "LT", "&", "|", "!", NULL};
+
 
 #endif
+
+
+/* STATIC VARIABLES */
+
+static int num_arith_calls = 0;
+
+/* END STATIC VARIABLES */
+
 
 /* STATIC FUNCTIONS */
 
@@ -96,12 +185,10 @@ static vm_mem_seg seg_to_vm_memseg(char *segment) {
 
 /**
  * Compares two strings using strcmp, but also allows either string given to be NULL.
- *
  * 
- * @param  char*  a  The first string to compare
- * @param  char*  b  The second string to compare
- * @return int       0 if the strings are equal, 1 if only one of them is NULL, and the value of
- *                   strcmp(a, b) otherwise
+ * @param a the first string to compare
+ * @param b the second string to compare
+ * @return  0 if the strings are equal, 1 if only one of them is NULL, and the value of strcmp(a, b) otherwise
  */
 static int vm_strcmp(const char *a, const char *b) {
     int diff;
@@ -120,9 +207,9 @@ static int vm_strcmp(const char *a, const char *b) {
 /**
  * Compares two vm_mem_seg structs.
  * 
- * @param  vm_mem_seg  a  The first vm_mem_seg to compare
- * @param  vm_mem_seg  b  The second vm_mem_seg to compare
- * @return int            1 if the a and be are equivalent, 0 otherwise
+ * @param a the first vm_mem_seg to compare
+ * @param b the second vm_mem_seg to compare
+ * @return  1 if the a and b are equivalent, 0 otherwise
  */
 static int segcmp(vm_mem_seg a, vm_mem_seg b) {
     return !vm_strcmp(a.vm_name, b.vm_name) && !vm_strcmp(a.hack_name, b.hack_name)
@@ -131,19 +218,64 @@ static int segcmp(vm_mem_seg a, vm_mem_seg b) {
 
 
 /**
- * Counts the number of digits in the given integer.
+ * Generates the internal label used in the final assembly file for the given VM operation.
  * 
- * @param  int  num  The number whose number of digits is to be counted
- * @return int       The number of digits in |num|
+ * @param op the operation for which to generate an internal label
+ * @return   the internal label for the given VM operation (name only, no symbols like '@' or '()' added)
  */
-static int num_digits(const int num) {
-    int copy = num;
-    int count = 0;
-    while (copy > 0) {
-        count++;
-        copy /= 10;
+static char *get_internal_op_label(const char *op) {
+    const char *internal_op_base = "__%s_OP";
+    int label_len = strlen(internal_op_base) - strlen("%s") + strlen(op);
+    char *op_uppercase = calloc(strlen(op) + 1, sizeof(char));
+    toupper_str(op_uppercase, op);
+
+    char *label = calloc(label_len + 1, sizeof(char));
+    snprintf(label, label_len + 1, internal_op_base, op_uppercase);
+    free(op_uppercase);
+
+    return label;
+}
+
+
+/**
+ * Generates the assembly code for a VM arithmetic operator.
+ *
+ * @param base_cmd the base command for the category of command being generated (add/sub, comparison, etc)
+ * @param op       the VM operation to generate assembly code for
+ * @param op_map   a hashmap mapping VM operations to assembly operators
+ * @return         the translated assembly code
+ */
+static char *gen_arith_cmd(const char *base_cmd, const char *op, ht_hash_table *op_map) {
+    char *encoded_cmd = NULL;
+    char *asm_op = ht_search(op_map, op);
+
+    if (asm_op == NULL) {
+        printf("[ERR] Invalid VM operation or invalid op_map given to gen_arith_cmd\n");
+    } else {
+        char *op_label = get_internal_op_label(op);
+        const char *label_fmt_str = "(%s)\n";
+        int label_fmt_str_len = strlen(label_fmt_str);
+        int base_cmd_len = strlen(base_cmd);
+        int final_base_cmd_len = base_cmd_len + label_fmt_str_len;
+
+        char *base_cmd_w_label = calloc(final_base_cmd_len + 1, sizeof(char));
+        base_cmd_w_label[0] = '\0';
+        strncat(base_cmd_w_label, label_fmt_str, label_fmt_str_len);
+        strncat(base_cmd_w_label, base_cmd, base_cmd_len);
+
+        // The length of "%s" times 2: once in label_fmt_str and once in for the assembly operation in base_cmd
+        int fmt_specifiers_len = 4;
+        int cmd_len = final_base_cmd_len - fmt_specifiers_len + strlen(op_label) + strlen(asm_op);
+
+        encoded_cmd = calloc(cmd_len + 1, sizeof(char));
+        snprintf(encoded_cmd, cmd_len + 1, base_cmd_w_label, op_label, asm_op);
+
+        free(op_label);
+        free(base_cmd_w_label);
+        free(asm_op);
     }
-    return count;
+
+    return encoded_cmd;
 }
 
 /* END STATIC FUNCTIONS */
@@ -158,8 +290,8 @@ static int num_digits(const int num) {
  * extension FOUT_EXT added to the end. In both cases, the output file will be created in the folder
  * that contains the input file/folder.
  *
- * @param  char*  input_path  The path to the file or folder being translated to assembly
- * @return FILE*              A file pointer to the output file
+ * @param input_path the path to the file or folder being translated to assembly
+ * @return           a file pointer to the output file
  */
 FILE *VM_Code_Writer(char *input_path) {
     // Check if input_path is a directory
@@ -224,6 +356,7 @@ FILE *VM_Code_Writer(char *input_path) {
     fprintf(out, "// Generated by Nand2Tetris VM translator written by Jesse Evers\n");
     fprintf(out, "// File: %s\n\n", output_path);
     fprintf(out, "%s\n\n", INIT_SP);
+    fprintf(out, "// Begin user-defined program\n");
 
     if (!out) {
         perror("[ERR] Failed to open VM output file");
@@ -239,10 +372,10 @@ FILE *VM_Code_Writer(char *input_path) {
 /**
  * Writes a VM command in .hack ASM format.
  *
- * @param  char*         command       The VM command to translate
- * @param  vm_command_t  command_type  The command type of the VM command
- * @param  FILE*         to_write      The file to write the translated command to
- * @return vm_wc_status                The status of the function
+ * @param command      the VM command to translate
+ * @param command_type the command type of the VM command
+ * @param to_write     the file to write the translated command to
+ * @return             the status of the function
  */
 vm_wc_status vm_write_command(char *command, vm_command_t command_type, FILE *to_write) {
     vm_wc_status status = WC_SUCCESS;
@@ -277,7 +410,7 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, FILE *to
     }
 
     if (status == WC_SUCCESS && translated != NULL) {
-        fprintf(to_write, "%s\n", translated);
+        fprintf(to_write, "%s", translated);
     } else {
         printf("[ERR] Not writing translation of command \"%s\" to file due to vm_wc_status code"
                " %d\n", command, status);
@@ -292,109 +425,45 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, FILE *to
 /**
  * Encodes arithmetic VM operations as Hack assembly code.
  *
- * @param  char*  command  The arithmetic command to encode
- * @return char*           The encoded version of |command|
+ * @param command the arithmetic command to encode
+ * @return        the encoded version of |command|
  */
 char *vm_translate_arithmetic(char *command) {
     // Removes any extra whitespace, makes sure it's valid, etc.
     char *cmd = vm_arg1(command);
-    char *encoded_cmd = NULL;
-    int dec_sp_len = strlen(DEC_SP);
-    int cmd_len;
-    int format_specifiers_len;
 
-    if (!strcmp(cmd, "add")) {
-        const char *add_cmd = "(__ADD_OP)\n"
-                              "  @SP\n"
-                              "  A=M-1\n"
-                              "  D=M\n"
-                              "%s\n"
-                              "  @SP\n"
-                              "  A=M-1\n"
-                              "  D=D+M\n"
-                              "  M=D\n";
-        format_specifiers_len = 2;  // Length of %s
-        cmd_len = strlen(add_cmd) - format_specifiers_len + dec_sp_len;
+    const char *goto_str =
+        "@POST_ARITH_CALL_%d\n"
+        "D=A\n"
+        "@R13\n"
+        "M=D\n"
+        "@%s\n"
+        "0;JMP\n"
+        "(POST_ARITH_CALL_%d)\n";
+    char *goto_label = get_internal_op_label(cmd);
 
-        encoded_cmd = calloc(cmd_len + 1, sizeof(char));
-        snprintf(encoded_cmd, cmd_len + 1, add_cmd, DEC_SP);
-    } else if (!strcmp(cmd, "sub")) {
-        const char *sub_cmd = "(__SUB_OP)\n"
-                              "  @SP\n"
-                              "  A=M-1\n"
-                              "  D=M\n"
-                              "%s\n"
-                              "  @SP\n"
-                              "  A=M-1\n"
-                              "  D=M-D\n"
-                              "  M=D\n";
-        format_specifiers_len = 2;  // Length of %s
-        cmd_len = strlen(sub_cmd) - format_specifiers_len + dec_sp_len;
+    int goto_str_len = strlen(goto_str);
+    int fmt_specifiers_len = 6;  // Length of "%s" + 2 * length of "%d"
+    int total_len = goto_str_len - fmt_specifiers_len + strlen(goto_label) + 2 * num_digits(num_arith_calls);
 
-        encoded_cmd = calloc(cmd_len + 1, sizeof(char));
-        snprintf(encoded_cmd, cmd_len + 1, sub_cmd, DEC_SP);
-    } else if (!strcmp(cmd, "neg")) {
-        const char *neg_cmd = "(__NEG_OP)\n"
-                              "  @SP\n"
-                              "  A=M-1\n"
-                              "  M=-M\n";
-        cmd_len = strlen(neg_cmd);
+    char *encoded_goto = calloc(total_len + 1, sizeof(char));
+    snprintf(encoded_goto, total_len + 1, goto_str, num_arith_calls, goto_label, num_arith_calls);
 
-        encoded_cmd = calloc(strlen(neg_cmd) + 1, sizeof(char));
-        snprintf(encoded_cmd, cmd_len + 1, neg_cmd);
-    } else if (!strcmp(cmd, "eq")) {
-        const char *eq_cmd = "(__EQ_OP)\n"
-                             "  @SP\n"
-                             "  A=M-1\n"
-                             "  D=M\n"
-                             "%s\n"  // Decrement stack pointer
-                             "  @SP\n"
-                             "  A=M-1\n"
-                             "  M=D-M\n"
-                             "  @__EQ_OP_END\n"
-                             "  D=A\n"
-                             "  @__after_tf_jmp\n"
-                             "  M=D\n"
-                             "  @SP\n"
-                             "  A=M-1\n"
-                             "  D=M\n"
-                             "  @__TRUE\n"
-                             "  D;JEQ\n"
-                             "  @__FALSE\n"
-                             "  0;JMP\n"
-                             "(__EQ_OP_END)\n"
-                             "  @__after_arith_jmp\n"
-                             "  0;JMP\n";
-
-        format_specifiers_len = 2;  // Length of %s
-        cmd_len = strlen(eq_cmd) - format_specifiers_len + dec_sp_len;
-
-        encoded_cmd = calloc(cmd_len + 1, sizeof(char));
-        snprintf(encoded_cmd, cmd_len + 1, encoded_cmd, DEC_SP);
-    } else if (!strcmp(cmd, "gt")) {
-
-    } else if (!strcmp(cmd, "lt")) {
-
-    } else if (!strcmp(cmd, "and")) {
-
-    } else if (!strcmp(cmd, "or")) {
-
-    } else if (!strcmp(cmd, "not")) {
-
-    }
-
+    free(goto_label);
     free(cmd);
 
-    return encoded_cmd;
+    num_arith_calls++;
+
+    return encoded_goto;
 }
 
 
 /**
  * Translates a VM push command into Hack assembly code.
- * 
- * @param  vm_mem_seg  segment  The segment that data is being pushed from
- * @param  int         index    The index in the segment to select data from
- * @return char*                The translated assembly code
+ *
+ * @param segment the segment that data is being pushed from
+ * @param index   the index in the segment to select data from
+ * @return        the translated assembly code
  */
 char *vm_translate_push(vm_mem_seg segment, int index) {
     char *push_encoded = NULL;
@@ -411,26 +480,21 @@ char *vm_translate_push(vm_mem_seg segment, int index) {
         // To push a constant value onto the stack, we have to increment the stack pointer,
         // store that value in D, and then put that value in the memory address pointed to by
         // the stack pointer.
-
-        const char *push_constant_cmds = "%s\n"
-                                         "  @%d\n"
-                                         "  D=A\n"
-                                         "  @SP\n"
-                                         "  A=M-1\n"
-                                         "  M=D\n";
-        int format_specifiers_len = 4;  // Combined length of %s and %d
-        int encoded_len = strlen(push_constant_cmds) - format_specifiers_len + strlen(INC_SP) + num_digits(mem_addr);
+        const char *push_constant =
+            "@SP\n"
+            "M=M+1\n"
+            "@%d\n"
+            "D=A\n"
+            "@SP\n"
+            "A=M-1\n"
+            "M=D\n";
+        int format_specifiers_len = 2;  // Length of "%d"
+        int encoded_len = strlen(push_constant) - format_specifiers_len + num_digits(mem_addr);
 
         push_encoded = calloc(encoded_len + 1, sizeof(char));
-        snprintf(push_encoded, encoded_len + 1, push_constant_cmds, INC_SP, mem_addr);
+        snprintf(push_encoded, encoded_len + 1, push_constant, mem_addr);
     } else {
         printf("[ERR] Pushing from the segment %s is not yet supported\n", segment.vm_name);
-        // sprintf(push,
-        //         "@%d\n"                     // Get the value from the heap
-        //         "D=M\n"
-        //         "@SP\n"                     // Push it onto the stack
-        //         "M=D\n",
-        //         mem_addr);
     }
 
     return push_encoded;
@@ -443,14 +507,40 @@ char *vm_translate_pop(vm_mem_seg segment, int index) {
 }
 
 
+/**
+ * Writes system-generated code to the output file, and closes it.
+ *
+ * @param cw the file to write all assembly code to
+ */
 void vm_code_writer_close(FILE *cw) {
+    fprintf(cw, "// End user-defined program\n\n");
     fprintf(cw, "// This terminates the program by sending it into an infinite loop\n");
-    fprintf(cw, "%s\n\n", INF_LOOP_END);
+    fprintf(cw, "%s\n", INF_LOOP);
+    /*
+     * All system-level assembly routines should go after this line. Any assembly routines placed before this
+     * may end up being run in the middle of the user's program.
+     */
 
-    /////////
-    // All system-level assembly routines should go after this line so that they aren't executed by accident
-    /////////
+    // A map of VM operations (add, sub, etc) and the assembly commands associated with them
+    ht_hash_table *vm_op_to_asm = ht_new(NUM_ARITH_OPS);
+    ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, VM_OPS, ASM_OPS);
+    
+    // Arithmetic operations (this could be made DRYer, but I think it's more clear when written out)
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "add", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "sub", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_CMP_BASE_CMD, "eq", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_CMP_BASE_CMD, "gt", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_CMP_BASE_CMD, "lt", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_BOOL_BASE_CMD, "and", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_BOOL_BASE_CMD, "or", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_UNARY_BASE_CMD, "neg", vm_op_to_asm));
+    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_UNARY_BASE_CMD, "not", vm_op_to_asm));
 
-    fprintf(cw, "// This is to enable true/false operations\n");
-    fprintf(cw, "%s\n\n", JMP_FLOW);
+    ht_delete(vm_op_to_asm);
+
+    // Assists jump back to primary program flow after arithmetic operations
+    fprintf(cw, "%s\n", ARITH_OP_END);
+
+    // Enables true/false operations
+    fprintf(cw, "%s\n", TF_FUNC);
 }

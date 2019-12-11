@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "parser.h"
 
 
@@ -45,11 +46,17 @@ extern const vm_mem_seg SEG_INVALID;
 
 
 // .hack assembly snippets
-extern const char *INC_SP;
-extern const char *DEC_SP;
-extern const char *JMP_FLOW;
-extern const char *INF_LOOP_END;
+extern const char *TF_FUNC;
+extern const char *INF_LOOP;
+extern const char *ARITH_OP_END;
+extern const char *ARITH_ADDSUB_BASE_CMD;
+extern const char *ARITH_CMP_BASE_CMD;
+extern const char *ARITH_BOOL_BASE_CMD;
+extern const char *ARITH_UNARY_BASE_CMD;
 
+extern const int NUM_ARITH_OPS;
+extern const char *VM_OPS[];
+extern const char *ASM_OPS[];
 
 FILE* VM_Code_Writer(char*);
 void vm_set_filename(char*);
