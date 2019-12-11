@@ -37,7 +37,7 @@ char *toupper_str(char *dest, const char *str) {
 
 
 /**
- * Counts the number of digits in the given integer.
+ * Counts the number of digits in the given integer (including the negative sign, if applicable).
  *
  * @param num the number whose number of digits is to be counted
  * @return    the number of digits in num
