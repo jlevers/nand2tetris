@@ -184,27 +184,6 @@ static vm_mem_seg seg_to_vm_memseg(char *segment) {
 
 
 /**
- * Compares two strings using strcmp, but also allows either string given to be NULL.
- * 
- * @param a the first string to compare
- * @param b the second string to compare
- * @return  0 if the strings are equal, 1 if only one of them is NULL, and the value of strcmp(a, b) otherwise
- */
-static int vm_strcmp(const char *a, const char *b) {
-    int diff;
-    if (a == NULL && b == NULL) {
-        diff = 0;
-    } else if (a == NULL || b == NULL) {
-        diff = 1;
-    } else {
-        diff = strcmp(a, b);
-    }
-
-    return diff;
-}
-
-
-/**
  * Compares two vm_mem_seg structs.
  * 
  * @param a the first vm_mem_seg to compare

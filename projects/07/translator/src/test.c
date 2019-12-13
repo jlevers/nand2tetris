@@ -12,14 +12,6 @@
 
 int tests_run = 0;
 
-/**
- * Frees a char pointer and sets it to NULL
- * @param char**  to_process  A pointer to the pointer to process
- */
-void reinit_char(char **to_process) {
-    free(*to_process);
-    *to_process = NULL;
-}
 
 int same_file(int fd1, int fd2) {
     struct stat stat1, stat2;
@@ -250,19 +242,121 @@ static char *test_util() {
     mu_assert("is_directory says that ./src/test/ is not a directory", is_directory("./src/test/"));
     mu_assert("is_directory says that ./src/test/Test.vm/ is a directory", !is_directory("./src/test/Test.vm"));
 
+
+    // Test path_parts_cmp()
+    path_parts pp1 = {"/a/b/c/", "d.e"};
+    path_parts pp2 = {"./asdf/qwer", NULL};
+    path_parts pp3 = {NULL, "file.ext"};
+    path_parts pp4 = {NULL, NULL};
+
+    mu_assert("path_parts_cmp incorrectly asserts that a path_parts struct with no NULL fields is not equal to itself",
+        path_parts_cmp(&pp1, &pp1));
+    mu_assert("path_parts_cmp incorrectly asserts that a path_parts struct with its dirname field set to NULL is not equal to itself",
+        path_parts_cmp(&pp2, &pp2));
+    mu_assert("path_parts_cmp incorrectly asserts that a path_parts struct with its basename field set to NULL is not equal to itself",
+        path_parts_cmp(&pp3, &pp3));
+    mu_assert("path_parts_cmp incorrectly asserts that two path_parts structs with opposite fields set to NULL are equal",
+        path_parts_cmp(&pp2, &pp3) == 0);
+    mu_assert("path_parts_cmp incorrectly asserts that a path_parts struct with both fields set to NULL does not equal itself",
+        path_parts_cmp(&pp4, &pp4));
+
+
+    // Test path_parts_split()
+    path_parts *split_path_dir, *split_path_dir_trailing_slash, *split_path_file, *split_path_relative, *split_path_single_segment;
+    split_path_dir = calloc(1, sizeof(path_parts));
+    split_path_dir_trailing_slash = calloc(1, sizeof(path_parts));
+    split_path_file = calloc(1, sizeof(path_parts));
+    split_path_relative = calloc(1, sizeof(path_parts));
+    split_path_single_segment = calloc(1, sizeof(path_parts));
+
+    split_path_dir->basename = calloc(strlen("./src/test"), sizeof(char));
+    split_path_dir->dirname = calloc(strlen("./src/test"), sizeof(char));
+    split_path_dir_trailing_slash->basename = calloc(strlen("./src/test/"), sizeof(char));
+    split_path_dir_trailing_slash->dirname = calloc(strlen("./src/test/"), sizeof(char));
+    split_path_file->basename = calloc(strlen("../Makefile"), sizeof(char));
+    split_path_file->dirname = calloc(strlen("../Makefile"), sizeof(char));
+    split_path_relative->basename = calloc(strlen("../../"), sizeof(char));
+    split_path_relative->dirname = calloc(strlen("../../"), sizeof(char));
+    split_path_single_segment->basename = calloc(strlen("src/"), sizeof(char));
+    split_path_single_segment->dirname = calloc(strlen("src/"), sizeof(char));
+
+    path_parts_split(split_path_dir, "./src/test");
+    path_parts_split(split_path_dir_trailing_slash, "./src/test/");
+    path_parts_split(split_path_file, "../Makefile");
+    path_parts_split(split_path_relative, "../../");
+    path_parts_split(split_path_single_segment, "src/");
+
+    mu_assert("split_path is incorrect when given a path ending in a directory without a trailing slash",
+        path_parts_cmp(split_path_dir, &((path_parts){"./src/", "test"})));
+    mu_assert("split_path is incorrect when given a path ending in a directory with a trailing slash",
+        path_parts_cmp(split_path_dir_trailing_slash, &((path_parts){"./src/", "test"})));
+    mu_assert("split_path is incorrect when given a path ending in a file",
+        path_parts_cmp(split_path_file, &((path_parts){"../", "Makefile"})));
+    mu_assert("split_path is incorrect when given a path only containing relative directories, ending with a trailing slash",
+        path_parts_cmp(split_path_relative, &((path_parts){"../", ".."})));
+    mu_assert("split_path is incorrect when given a path that only consists of a single file/directory",
+        path_parts_cmp(split_path_single_segment, &((path_parts){"", "src"})));
+
+
+    // Test del_path_parts()
+    // I'm really just testing this by using valgrind to ensure there are no memory leaks
+    del_path_parts(&split_path_dir);
+    del_path_parts(&split_path_dir_trailing_slash);
+    del_path_parts(&split_path_file);
+    del_path_parts(&split_path_relative);
+    del_path_parts(&split_path_single_segment);
+
+
+    // Test remove_fext()
+    char *remove_fext_no_fext = remove_fext("Makefile");
+    char *remove_fext_single_char_fext = remove_fext("test.c");
+    char *remove_fext_long_fext = remove_fext("foo.qwertyuiop");
+
+    mu_assert("remove_fext incorrectly processes filenames with no file extension", !strcmp(remove_fext_no_fext, "Makefile"));
+    mu_assert("remove_fext incorrectly processes filenames with a single-character file extension",
+        !strcmp(remove_fext_single_char_fext, "test"));
+    mu_assert("remove_fext incorrectly processes filenames with long file extensions",
+        !strcmp(remove_fext_long_fext, "foo"));
+
+    reinit_char(&remove_fext_no_fext);
+    reinit_char(&remove_fext_single_char_fext);
+    reinit_char(&remove_fext_long_fext);
+
+
     // Test toupper_str()
-    char *all_lower = calloc(5, sizeof(char));
-    char *mixed_case = calloc(7, sizeof(char));
-    all_lower = "abcd";
-    mixed_case = "4Daf!!";
+    char *all_lower = "abcd";
+    char *mixed_case = "4Daf!!";
     char *lower_upper = calloc(strlen("abcd") + 1, sizeof(char));
     char *mixed_upper = calloc(strlen("4Daf!!") + 1, sizeof(char));
     toupper_str(lower_upper, all_lower);
     toupper_str(mixed_upper, mixed_case);
+
     mu_assert("toupper_str doesn't properly convert \"abcd\" to uppercase", !strcmp(lower_upper, "ABCD"));
     mu_assert("toupper_str doesn't properly convert \"4Daf!!\" to uppercase", !strcmp(mixed_upper, "4DAF!!"));
+
     reinit_char(&lower_upper);
     reinit_char(&mixed_upper);
+
+
+    // Test vm_strcmp()
+    char *s1 = "abc";
+    char *s2 = "def";
+
+    mu_assert("vm_strcmp asserts that a non-NULL string is not equal to itself", !vm_strcmp(s1, s1));
+    mu_assert("vm_strcmp asserts that a non-NULL string is equal to a different non-NULL string", !vm_strcmp(s1, s2) == 0);
+    mu_assert("vm_strcmp asserts that a non-NULL string is equal to a NULL string", !vm_strcmp(s2, NULL) == 0);
+    mu_assert("vm_strcmp asserts that a NULL string is not equal to NULL", !vm_strcmp(NULL, NULL));
+
+
+    // Test reinit_char()
+    char *to_reinit1 = calloc(4, sizeof(char));
+    char *to_reinit2 = NULL;
+    reinit_char(&to_reinit1);
+    reinit_char(&to_reinit2);
+
+    mu_assert("reinit_char does not successfully set a pointer to a non-NULL char* to NULL", to_reinit1 == NULL);
+    mu_assert("reinit_char doesn't leave a pointer to a NULL char* as NULL", to_reinit2 == NULL);
+
 
     // Test num_digits()
     mu_assert("num_digits says that 0 doesn't have 1 digit", num_digits(0) == 1);
