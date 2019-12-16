@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #ifndef _VM_ASM_CONSTANTS
 #define _VM_ASM_CONSTANTS
 
@@ -72,32 +74,32 @@ const char *ARITH_CMP_BASE_CMD =
     "@__END_ARITH_OP\n"
     "D=A\n"
     "@R14\n"
-    "M=D\n"
-    "@SP\n"
-    "A=M-1\n"
-    "D=M\n"
-    "@__TRUE\n"
-    "D;J%s\n"
-    "@__FALSE\n"
-    "0;JMP\n";
+"M=D\n"
+"@SP\n"
+"A=M-1\n"
+"D=M\n"
+"@__TRUE\n"
+"D;J%s\n"
+"@__FALSE\n"
+"0;JMP\n";
 
 const char *ARITH_BOOL_BASE_CMD =
-    "@SP\n"
-    "A=M-1\n"
-    "D=M\n"
-    "@SP\n"
-    "M=M-1\n"
-    "A=M-1\n"
-    "M=M%sD\n"
-    "@__END_ARITH_OP\n"
-    "0;JMP\n";
+"@SP\n"
+"A=M-1\n"
+"D=M\n"
+"@SP\n"
+"M=M-1\n"
+"A=M-1\n"
+"M=M%sD\n"
+"@__END_ARITH_OP\n"
+"0;JMP\n";
 
 const char *ARITH_UNARY_BASE_CMD =
-    "@SP\n"
-    "A=M-1\n"
-    "M=%sM\n"
-    "@__END_ARITH_OP\n"
-    "0;JMP\n";
+"@SP\n"
+"A=M-1\n"
+"M=%sM\n"
+"@__END_ARITH_OP\n"
+"0;JMP\n";
 
 
 // All (PUSH|POP)_XXX_SEG constants are series of .hack commands for pushing/popping to/from the stack
@@ -164,5 +166,8 @@ const char *POP_STATIC_SEG =
     "D=M\n"
     "@%s.%d\n"
     "M=D\n";
+
+const int NUM_ARITH_OPS = 9;
+const char *ASM_OPS[] = {"+", "-", "-", "EQ", "GT", "LT", "&", "|", "!", NULL};
 
 #endif

@@ -4,9 +4,10 @@
 
 #include "asm_constants.h"
 #include "code_writer.h"
-#include "../../../lib/hash_table.h"
 #include "parser.h"
 #include "util.h"
+#include "vm_constants.h"
+#include "../../../lib/hash_table.h"
 
 
 #ifndef _VM_CODE_WRITER_VARS
@@ -31,10 +32,6 @@ const vm_mem_seg STACK = {"stack", NULL, 256, 2047};
 const vm_mem_seg HEAP = {"heap", NULL, 2048, 16483};
 const vm_mem_seg MEMMAP_IO = {"io", NULL, 16384, 24575};
 const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
-
-const int NUM_ARITH_OPS = 9;
-const char *VM_OPS[] = {"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", NULL};
-const char *ASM_OPS[] = {"+", "-", "-", "EQ", "GT", "LT", "&", "|", "!", NULL};
 
 
 #endif
@@ -388,7 +385,7 @@ void vm_code_writer_close(code_writer *cw) {
 
     // A map of VM operations (add, sub, etc) and the assembly commands associated with them
     ht_hash_table *vm_op_to_asm = ht_new(NUM_ARITH_OPS);
-    ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, VM_OPS, ASM_OPS);
+    ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, ARITHMETIC_OPS, ASM_OPS);
     
     // Arithmetic operations (this could be made DRYer, but I think it's more clear when written out)
     char *add_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "add", vm_op_to_asm);

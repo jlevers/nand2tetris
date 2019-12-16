@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 
 #include "parser.h"
+#include "vm_constants.h"
 
 #ifndef _VM_PARSER_VARS
 #define _VM_PARSER_VARS
@@ -11,27 +12,14 @@
 const char BEGIN_COMMENT = '/';
 const char EOL = '\n';
 
-const char *ARITHMETIC_CMDS[9] = {"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not"};
-const char *PUSH_CMD = "push";
-const char *POP_CMD = "pop";
-const char *LABEL_CMD = "label";
-const char *GOTO_CMD = "goto";
-const char *IF_CMD = "if-goto";
-const char *FUNCTION_CMD = "function";
-const char *CALL_CMD = "call";
-const char *RETURN_CMD = "return";
-
-const int ARITHMETIC_CMDS_NUM_ARGS[9] = {2, 2, 1, 2, 2, 2, 2, 2, 1};
-const int SHORTEST_CMD_LEN = 2;
-
 #endif
 
 
 /**
  * Opens the .vm file for processing.
  *
- * @param  char*  input_path The path to the .vm file to process
- * @return FILE*             The file handler pointer for the .vm file
+ * @param input_path the path to the .vm file to process
+ * @return           the file handler pointer for the .vm file
  */
 
 FILE *VM_Parser(char *input_path) {
@@ -48,8 +36,8 @@ FILE *VM_Parser(char *input_path) {
 /**
  * Gets the next line of the .vm file being parsed.
  *
- * @param  FILE*  file  The file to get the next line of
- * @return char*        The next line of the file
+ * @param file the file to get the next line of
+ * @return     the next line of the file
  */
 char *vm_advance(FILE *file) {
     int c = 0;
@@ -124,8 +112,8 @@ char *vm_advance(FILE *file) {
 /**
  * Determines the command type of @command.
  *
- * @param  char*  command  The command to determine the type of
- * @return vm_command_t    The command type
+ * @param command the command to determine the type of
+ * @return        the command type
  */
 vm_command_t vm_command_type(char *line) {
     unsigned int i = 0;
@@ -135,7 +123,7 @@ vm_command_t vm_command_type(char *line) {
         }
     }
 
-    if ((int)i < SHORTEST_CMD_LEN) {
+    if ((int)i < SHORTEST_OP_LEN) {
         return C_INVALID;
     }
 
@@ -145,25 +133,25 @@ vm_command_t vm_command_type(char *line) {
     
     vm_command_t cmd_type = C_INVALID;
 
-    if (!strcmp(cmd, PUSH_CMD)) {
+    if (!strcmp(cmd, PUSH_OP)) {
         cmd_type = C_PUSH;
-    } else if (!strcmp(cmd, POP_CMD)) {
+    } else if (!strcmp(cmd, POP_OP)) {
         cmd_type = C_POP;
-    } else if (!strcmp(cmd, LABEL_CMD)) {
+    } else if (!strcmp(cmd, LABEL_OP)) {
         cmd_type = C_LABEL;
-    } else if (!strcmp(cmd, GOTO_CMD)) {
+    } else if (!strcmp(cmd, GOTO_OP)) {
         cmd_type = C_GOTO;
-    } else if (!strcmp(cmd, IF_CMD)) {
+    } else if (!strcmp(cmd, IF_OP)) {
         cmd_type = C_IF;
-    } else if (!strcmp(cmd, FUNCTION_CMD)) {
+    } else if (!strcmp(cmd, FUNCTION_OP)) {
         cmd_type = C_FUNCTION;
-    } else if (!strcmp(cmd, CALL_CMD)) {
+    } else if (!strcmp(cmd, CALL_OP)) {
         cmd_type = C_CALL;
-    } else if (!strcmp(cmd, RETURN_CMD)) {
+    } else if (!strcmp(cmd, RETURN_OP)) {
         cmd_type = C_RETURN;
     } else {
-        for (i = 0; i < sizeof(ARITHMETIC_CMDS) / sizeof(ARITHMETIC_CMDS[0]); i++) {
-            if (!strcmp(cmd, ARITHMETIC_CMDS[i])) {
+        for (i = 0; i < sizeof(ARITHMETIC_OPS) / sizeof(ARITHMETIC_OPS[0]) - 1; i++) {
+            if (!strcmp(cmd, ARITHMETIC_OPS[i])) {
                 cmd_type = C_ARITHMETIC;
             }
         }
@@ -180,8 +168,8 @@ vm_command_t vm_command_type(char *line) {
  * ("add", "sub", etc.) is returned. Should not be called for C_RETURN. If given an invalid command
  * type, returns NULL.
  *
- * @param  char*  line  The line from the VM program
- * @return char*        The first argument, or NULL if an invalid command type is given
+ * @param line the line from the VM program
+ * @return     the first argument, or NULL if an invalid command type is given
 */
 char *vm_arg1(char *line) {
     vm_command_t cmd_type = vm_command_type(line);
@@ -218,8 +206,8 @@ char *vm_arg1(char *line) {
  * Returns the second argument of the current command. Should be called only if the current command
  * is C_PUSH, C_POP, C_FUNCTION, or C_CALL. If called on an invalid command type, returns -1.
  *
- * @param  char*  line  The VM program line to parse the second argument out of
- * @return int          The second argument, or -1 if the second argument doesn't exist
+ * @param line the VM program line to parse the second argument out of
+ * @return     the second argument, or -1 if the second argument doesn't exist
  */
 int vm_arg2(char *line) {
     vm_command_t cmd_type = vm_command_type(line);

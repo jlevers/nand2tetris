@@ -56,9 +56,6 @@ extern const vm_mem_seg HEAP;
 extern const vm_mem_seg MEMMAP_IO;
 extern const vm_mem_seg SEG_INVALID;
 
-extern const int NUM_ARITH_OPS;
-extern const char *VM_OPS[];
-extern const char *ASM_OPS[];
 
 void VM_Code_Writer(char*, code_writer*);
 void vm_set_filename(char*);

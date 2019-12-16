@@ -19,4 +19,7 @@ extern const char *POP_POINTER_SEG;
 extern const char *PUSH_STATIC_SEG;
 extern const char *POP_STATIC_SEG;
 
+extern const int NUM_ARITH_OPS;
+extern const char *ASM_OPS[];
+
 #endif
