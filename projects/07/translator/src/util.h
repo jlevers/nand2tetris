@@ -1,7 +1,7 @@
 #ifndef _VM_UTIL_H
 #define _VM_UTIL_H
 
-extern const char DIR_SEP;
+extern const char DIR_SEP;    // The character used to separate directories in a file path
 
 // Represents the parts of a a filesystem path.
 // Basename and dirname here refer to the *nix meaning: http://man7.org/linux/man-pages/man3/basename.3.html

@@ -25,7 +25,6 @@ typedef enum vm_wc_status {
 
 
 extern const char* FOUT_EXT;  // The file extension for the output file
-extern const char DIR_SEP;    // The character used to separate directories in a file path
 
 
 // Predefined memory segments
@@ -43,16 +42,6 @@ extern const vm_mem_seg STACK;
 extern const vm_mem_seg HEAP;
 extern const vm_mem_seg MEMMAP_IO;
 extern const vm_mem_seg SEG_INVALID;
-
-
-// .hack assembly snippets
-extern const char *TF_FUNC;
-extern const char *INF_LOOP;
-extern const char *ARITH_OP_END;
-extern const char *ARITH_ADDSUB_BASE_CMD;
-extern const char *ARITH_CMP_BASE_CMD;
-extern const char *ARITH_BOOL_BASE_CMD;
-extern const char *ARITH_UNARY_BASE_CMD;
 
 extern const int NUM_ARITH_OPS;
 extern const char *VM_OPS[];

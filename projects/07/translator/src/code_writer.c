@@ -2,32 +2,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "asm_constants.h"
 #include "code_writer.h"
 #include "../../../lib/hash_table.h"
 #include "parser.h"
 #include "util.h"
 
 
-/*
- * NOTES
- * -----
- * For arithmetic operations, the address to jump to after completing the operation is stored in @R13.
- * For true/false operations, the address to jump to after completing the operation is stored in @R14.
- * All internal labels begin with a double underscore: __LABEL_NAME
- */
-
-
 #ifndef _VM_CODE_WRITER_VARS
 #define _VM_CODE_WRITER_VARS
 
 const char *FOUT_EXT = ".asm";
-const char DIR_SEP = '/';
 
+// See code_writer.h for details on how vm_mem_seg is used
 const vm_mem_seg SP = {NULL, "SP", 0, 0};
-const vm_mem_seg LCL = {"local", "LCL", 1, 1};
-const vm_mem_seg ARG = {"argument", "ARG", 2, 2};
-const vm_mem_seg THIS = {"this", "THIS", 3, 3};
-const vm_mem_seg THAT = {"that", "THAT", 4, 4};
+const vm_mem_seg LCL = {"local", "LCL", 1, -1};
+const vm_mem_seg ARG = {"argument", "ARG", 2, -1};
+const vm_mem_seg THIS = {"this", "THIS", 3, -1};
+const vm_mem_seg THAT = {"that", "THAT", 4, -1};
 const vm_mem_seg POINTER = {"pointer", NULL, 3, 4};
 const vm_mem_seg TEMP = {"temp", "TEMP", 5, 12};
 const vm_mem_seg GENERAL = {"general", NULL, 13, 15};
@@ -39,95 +31,6 @@ const vm_mem_seg STACK = {"stack", NULL, 256, 2047};
 const vm_mem_seg HEAP = {"heap", NULL, 2048, 16483};
 const vm_mem_seg MEMMAP_IO = {"io", NULL, 16384, 24575};
 const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
-
-const char *INIT_SP =
-    "// Initialize stack pointer\n"
-    "@256\n"
-    "D=A\n"
-    "@SP\n"
-    "M=D";
-
-const char *INF_LOOP =
-    "(__INFINITE_LOOP)\n"
-    "@__INFINITE_LOOP\n"
-    "0;JMP\n";
-
-const char *TF_FUNC =
-    "(__TRUE)\n"
-    "@SP\n"
-    "A=M-1\n"
-    "M=-1\n"
-    "@R14\n"
-    "A=M\n"
-    "0;JMP\n"
-    "(__FALSE)\n"
-    "@SP\n"
-    "A=M-1\n"
-    "M=0\n"
-    "@R14\n"
-    "A=M\n"
-    "0;JMP";
-
-const char *ARITH_OP_END =
-    "(__END_ARITH_OP)\n"
-    "@R13\n"
-    "A=M\n"
-    "0;JMP\n";
-
-/*
- * All the following ARITH_<OPTYPE>_BASE_CMD constants are missing their function labels, which are generated
- * in gen_arith_cmd() when the command is written to the end of the assembly file. Each base command contains a single
- * format specifier in the place of a specific arithmetic operator, which will be filled in by gen_arith_cmd().
- */
-const char *ARITH_ADDSUB_BASE_CMD =
-    "@SP\n"
-    "A=M-1\n"
-    "D=M\n"
-    "@SP\n"
-    "M=M-1\n"
-    "A=M-1\n"
-    "D=M%sD\n"
-    "M=D\n"
-    "@__END_ARITH_OP\n"
-    "0;JMP\n";
-
-const char *ARITH_CMP_BASE_CMD =
-    "@SP\n"
-    "A=M-1\n"
-    "D=M\n"
-    "@SP\n"
-    "M=M-1\n"
-    "A=M-1\n"
-    "M=M-D\n"
-    "@__END_ARITH_OP\n"
-    "D=A\n"
-    "@R14\n"
-    "M=D\n"
-    "@SP\n"
-    "A=M-1\n"
-    "D=M\n"
-    "@__TRUE\n"
-    "D;J%s\n"
-    "@__FALSE\n"
-    "0;JMP\n";
-
-const char *ARITH_BOOL_BASE_CMD =
-    "@SP\n"
-    "A=M-1\n"
-    "D=M\n"
-    "@SP\n"
-    "M=M-1\n"
-    "A=M-1\n"
-    "M=M%sD\n"
-    "@__END_ARITH_OP\n"
-    "0;JMP\n";
-
-const char *ARITH_UNARY_BASE_CMD =
-    "@SP\n"
-    "A=M-1\n"
-    "M=%sM\n"
-    "@__END_ARITH_OP\n"
-    "0;JMP\n";
 
 const int NUM_ARITH_OPS = 9;
 const char *VM_OPS[] = {"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not", NULL};

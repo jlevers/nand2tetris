@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -Wno-format-security -g -fsanitize=undefined
 LDLIBS = -lm -L../../lib/ -Wl,-rpath=../../lib/ -lhashtable -lmcheck
-OBJFILES := parser.o code_writer.o util.o
+OBJFILES := asm_constants.o code_writer.o parser.o util.o
 OBJDIR := build
 SRCDIR := src
 OBJS := $(addprefix $(OBJDIR)/,$(OBJFILES))
