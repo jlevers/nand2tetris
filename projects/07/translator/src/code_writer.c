@@ -105,7 +105,7 @@ static int segcmp(vm_mem_seg a, vm_mem_seg b) {
  * @param op the operation for which to generate an internal label
  * @return   the internal label for the given VM operation (name only, no symbols like '@' or '()' added)
  */
-static char *get_internal_op_label(const char *op) {
+static char *get_internal_op_label(char *op) {
     const char *internal_op_base = "__%s_OP";
     int label_len = strlen(internal_op_base) - strlen("%s") + strlen(op);
     char *op_uppercase = calloc(strlen(op) + 1, sizeof(char));
@@ -127,7 +127,7 @@ static char *get_internal_op_label(const char *op) {
  * @param op_map   a hashmap mapping VM operations to assembly operators
  * @return         the translated assembly code
  */
-static char *gen_arith_cmd(const char *base_cmd, const char *op, ht_hash_table *op_map) {
+static char *gen_arith_cmd(const char *base_cmd, char *op, ht_hash_table *op_map) {
     char *encoded_cmd = NULL;
     char *asm_op = ht_search(op_map, op);
 
@@ -135,7 +135,7 @@ static char *gen_arith_cmd(const char *base_cmd, const char *op, ht_hash_table *
         printf("[ERR] Invalid VM operation or invalid op_map given to gen_arith_cmd\n");
     } else {
         char *op_label = get_internal_op_label(op);
-        const char *label_fmt_str = "(%s)\n";
+        char *label_fmt_str = "(%s)\n";
         int label_fmt_str_len = strlen(label_fmt_str);
         int base_cmd_len = strlen(base_cmd);
         int final_base_cmd_len = base_cmd_len + label_fmt_str_len;
@@ -165,89 +165,61 @@ static char *gen_arith_cmd(const char *base_cmd, const char *op, ht_hash_table *
 
 
 /**
- * Opens the output file to which to write the assembly code that reuslts from translating the input
- * file(s). If @input_path is a path to a file, the output file will be named the same thing as the
- * input file, but with the file extension FOUT_EXT instead of .vm. If @input_path is a path to a
- * folder, the output file will be named the same thing as the input folder, but with the file
- * extension FOUT_EXT added to the end. In both cases, the output file will be created in the folder
- * that contains the input file/folder.
+ * Populates the code_writer struct to use to write the assembly code that reuslts from translating the input
+ * file(s).
+ * 
+ * If @input_path is a path to a file, the output file will be named the same thing as the
+ * input file, but ending with FOUT_EXT instead of .vm. If @input_path is a path to a
+ * folder, the output file will have the same name as the input folder, with the file extension FOUT_EXT
+ * added. In both cases, the output file will be created in the folder that contains the input file/folder.
+ * 
+ * @cw will initially have its in_name field set to NULL.
  *
  * @param input_path the path to the file or folder being translated to assembly
- * @return           a file pointer to the output file
+ * @param cw         the code_writer struct to use for translation
  */
-FILE *VM_Code_Writer(char *input_path) {
-    // Check if input_path is a directory
-    int is_dir = is_directory(input_path);
+void VM_Code_Writer(char *input_path, code_writer *cw) {
+    path_parts *input_parts = calloc(1, sizeof(path_parts));
+    input_parts->basename = calloc(strlen(input_path) + 1, sizeof(char));
+    input_parts->dirname = calloc(strlen(input_path) + 1, sizeof(char));
+    path_parts_split(input_parts, input_path);
 
-    // Make sure we ignore any trailing DIR_SEP (e.g., the last character of the path
-    // "/with/trailing/slash/") if it exists
-    int input_path_len = (int)strlen(input_path);
-    if (input_path[input_path_len - 1] == DIR_SEP) {
-        input_path_len--;
-    }
-
-    char *path_copy = calloc(input_path_len + 1, sizeof(char));
-    strncpy(path_copy, input_path, input_path_len);
-    path_copy[input_path_len] = '\0';
-
-    int last_slash_idx = input_path_len - 1;
-    while(last_slash_idx >= 0 && input_path[last_slash_idx] != DIR_SEP) { last_slash_idx--; }
-
-    int outfile_name_len = input_path_len - (last_slash_idx + 1);
-
-    int period_idx = -1;
-    // Only need to worry about handling the input file's file extension if the input path was a
-    // path to a file
-    if (!is_dir) {
-        for (int i = strlen(path_copy) - 1; i >= 0; i--) {
-            if (path_copy[i] == '.') {
-                period_idx = i;
-                break;
-            }
-        }
-
-        // Remove the length of '.' + file extension from outfile_name_len, if the input file has
-        // a file extension
-        if (period_idx > -1) {
-            outfile_name_len -= input_path_len - (period_idx + 1);
-        }
-    }
-
-    // If there was no period in the input path, set period_idx to the length of the input path
-    if (period_idx == -1) period_idx = input_path_len;
+    char *outfile_base_name = remove_fext(input_parts->basename);
+    int outfile_base_name_len = strlen(outfile_base_name);
 
     // Get just the actual filename to write to -- e.g., outfile.asm
-    char *outfile_name = calloc(outfile_name_len + (int)strlen(FOUT_EXT) + 1, sizeof(char));
-    strncpy(outfile_name, path_copy + last_slash_idx + 1, period_idx - (last_slash_idx + 1));
-    outfile_name[outfile_name_len] = '\0';
-    strcat(outfile_name, FOUT_EXT);
+    char *outfile_name = calloc(outfile_base_name_len + strlen(FOUT_EXT) + 1, sizeof(char));
+    strncpy(outfile_name, outfile_base_name, outfile_base_name_len);
+    outfile_name[outfile_base_name_len] = '\0';
+    strncat(outfile_name, FOUT_EXT, strlen(FOUT_EXT));
 
     // Combine the path to the output file with the actual name of the output file. E.g.,
     // ./example/path/to/outfile.asm
-    int full_output_path_len = (int)strlen(outfile_name) + (last_slash_idx + 1);
-    char *output_path = calloc(full_output_path_len + 1, sizeof(char));
-    strncpy(output_path, path_copy, last_slash_idx + 1);
-    output_path[last_slash_idx + 1] = '\0';
-    strcat(output_path, outfile_name);
+    int dirname_len = strlen(input_parts->dirname);
+    int outfile_name_len = strlen(outfile_name);
+    int output_path_len = outfile_name_len + dirname_len;
+    char *output_path = calloc(output_path_len + 1, sizeof(char));
+    output_path[output_path_len] = '\0';
+    strncpy(output_path, input_parts->dirname, dirname_len);
+    strncat(output_path, outfile_name, outfile_name_len);
 
     FILE *out = fopen(output_path, "w");
 
-    free(path_copy);
-    free(outfile_name);
+    if (!out) {
+        perror("[ERR] Failed to open VM output file");
+    } else {
+        cw->out = out;
+    }
 
     fprintf(out, "// Generated by Nand2Tetris VM translator written by Jesse Evers\n");
     fprintf(out, "// File: %s\n\n", output_path);
     fprintf(out, "%s\n\n", INIT_SP);
     fprintf(out, "// Begin user-defined program\n");
 
-    if (!out) {
-        perror("[ERR] Failed to open VM output file");
-        return NULL;
-    }
-
+    free(outfile_base_name);
+    free(outfile_name);
     free(output_path);
-
-    return out;
+    del_path_parts(&input_parts);
 }
 
 
@@ -256,10 +228,10 @@ FILE *VM_Code_Writer(char *input_path) {
  *
  * @param command      the VM command to translate
  * @param command_type the command type of the VM command
- * @param to_write     the file to write the translated command to
+ * @param cw           the code_writer to use to write the translated command
  * @return             the status of the function
  */
-vm_wc_status vm_write_command(char *command, vm_command_t command_type, FILE *to_write) {
+vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_writer *cw) {
     vm_wc_status status = WC_SUCCESS;
     char *translated = NULL;
 
@@ -268,11 +240,7 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, FILE *to
         int index = vm_arg2(command);
         if (segment != NULL && strlen(segment) && index > -1) {
             vm_mem_seg seg = seg_to_vm_memseg(segment);
-            if (command_type == C_PUSH) {
-                translated = vm_translate_push(seg, index);
-            } else if (command_type == C_POP) {
-                translated = vm_translate_pop(seg, index);
-            }
+            translated = vm_translate_push_pop(seg, index, command_type, cw->in_name);
         } else {
             const char *err = "[ERR] Result of calling vm_arg1() on command \"%s\" was NULL. "
                               "Cannot translate command\n";
@@ -292,7 +260,7 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, FILE *to
     }
 
     if (status == WC_SUCCESS && translated != NULL) {
-        fprintf(to_write, "%s", translated);
+        fprintf(cw->out, "%s", translated);
     } else {
         printf("[ERR] Not writing translation of command \"%s\" to file due to vm_wc_status code"
                " %d\n", command, status);
@@ -341,63 +309,78 @@ char *vm_translate_arithmetic(char *command) {
 
 
 /**
- * Translates a VM push command into Hack assembly code.
+ * Translates a VM push or pop command into Hack assembly code.
  *
- * @param segment the segment that data is being pushed from
- * @param index   the index in the segment to select data from
- * @return        the translated assembly code
+ * @param segment  the segment that data is being pushed from/popped to
+ * @param index    the index in the segment to select data from
+ * @param cmd_type the type of command to translate (push or pop)
+ * @param in_fname the name (without a file extension) of the .vm file being translated
+ * @return         the translated assembly code
  */
-char *vm_translate_push(vm_mem_seg segment, int index) {
+char *vm_translate_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, char *in_fname) {
     char *push_encoded = NULL;
+    const char *base_asm_cmds;
     // The value to push onto the stack is the value starting at the index-th value in 
     // the given segment
     int mem_addr = index + segment.begin_addr;
+    int fmt_specifiers_len, translated_len;
 
     if (segcmp(segment, SEG_INVALID)) {
         printf("[ERR] Invalid memory segment %s\n", segment.vm_name == NULL ? "(unnamed segment)" : segment.vm_name);
     // Validate the memory address
-    } else if (mem_addr < 0 || mem_addr > segment.end_addr) {
+    } else if (mem_addr < 0 || (segment.end_addr > -1 && mem_addr > segment.end_addr)) {
         printf("[ERR] Invalid memory address %d in segment %s\n", mem_addr, segment.vm_name);
     } else if (segcmp(segment, CONSTANT)) {
-        // To push a constant value onto the stack, we have to increment the stack pointer,
-        // store that value in D, and then put that value in the memory address pointed to by
-        // the stack pointer.
-        const char *push_constant =
-            "@SP\n"
-            "M=M+1\n"
-            "@%d\n"
-            "D=A\n"
-            "@SP\n"
-            "A=M-1\n"
-            "M=D\n";
-        int format_specifiers_len = 2;  // Length of "%d"
-        int encoded_len = strlen(push_constant) - format_specifiers_len + num_digits(mem_addr);
-
-        push_encoded = calloc(encoded_len + 1, sizeof(char));
-        snprintf(push_encoded, encoded_len + 1, push_constant, mem_addr);
+        /*
+         * To push a constant value onto the stack, we have to increment the stack pointer,
+         * store that value in D, and then put that value in the memory address pointed to by
+         * the stack pointer.
+         * 
+         * Since the constant "segment" is a virtual segment with no RAM associated with it,
+         * the "pop" command cannot be used with it.
+         */
+        base_asm_cmds = PUSH_CONSTANT_SEG;
+        fmt_specifiers_len = 2;
+        translated_len = strlen(base_asm_cmds) - fmt_specifiers_len + num_digits(mem_addr);
+        push_encoded = calloc(translated_len + 1, sizeof(char));
+        snprintf(push_encoded, translated_len + 1, base_asm_cmds, mem_addr);
+    } else if (segcmp(segment, LCL) || segcmp(segment, ARG) || segcmp(segment, THIS) || segcmp(segment, THAT)) {
+        base_asm_cmds = (cmd_type == C_PUSH ? PUSH_VIRTUAL_SEG : POP_VIRTUAL_SEG);
+        fmt_specifiers_len = 4;
+        translated_len = strlen(base_asm_cmds) - fmt_specifiers_len + strlen(segment.hack_name) + num_digits(index);
+        push_encoded = calloc(translated_len + 1, sizeof(char));
+        snprintf(push_encoded, translated_len + 1, base_asm_cmds, segment.hack_name, index);
+    } else if (segcmp(segment, POINTER) || segcmp(segment, TEMP)) {
+        base_asm_cmds = (cmd_type == C_PUSH ? PUSH_POINTER_SEG : POP_POINTER_SEG);
+        fmt_specifiers_len = 2;
+        translated_len = strlen(base_asm_cmds) - fmt_specifiers_len + num_digits(mem_addr);
+        push_encoded = calloc(translated_len + 1, sizeof(char));
+        snprintf(push_encoded, translated_len + 1, base_asm_cmds, mem_addr);
+    } else if (segcmp(segment, STATIC)) {
+        base_asm_cmds = (cmd_type == C_PUSH ? PUSH_STATIC_SEG : POP_STATIC_SEG);
+        fmt_specifiers_len = 4;
+        translated_len = strlen(base_asm_cmds) - fmt_specifiers_len + strlen(in_fname) + num_digits(index);
+        push_encoded = calloc(translated_len + 1, sizeof(char));
+        snprintf(push_encoded, translated_len + 1, base_asm_cmds, in_fname, index);
     } else {
-        printf("[ERR] Pushing from the segment %s is not yet supported\n", segment.vm_name);
+        printf("[ERR] Pushing from the segment %s is not supported\n", segment.vm_name);
     }
 
     return push_encoded;
 }
 
 
-char *vm_translate_pop(vm_mem_seg segment, int index) {
-    printf("%s %d\n", segment.vm_name, index);
-    return NULL;
-}
-
-
 /**
  * Writes system-generated code to the output file, and closes it.
  *
- * @param cw the file to write all assembly code to
+ * @param cw the code_writer used to write all translated assembly code
  */
-void vm_code_writer_close(FILE *cw) {
-    fprintf(cw, "// End user-defined program\n\n");
-    fprintf(cw, "// This terminates the program by sending it into an infinite loop\n");
-    fprintf(cw, "%s\n", INF_LOOP);
+void vm_code_writer_close(code_writer *cw) {
+    FILE *out = cw->out;
+
+    fprintf(out, "// End user-defined program\n\n");
+    fprintf(out, "// This terminates the program by sending it into an infinite loop\n");
+    fprintf(out, "%s\n", INF_LOOP);
     /*
      * All system-level assembly routines should go after this line. Any assembly routines placed before this
      * may end up being run in the middle of the user's program.
@@ -408,21 +391,52 @@ void vm_code_writer_close(FILE *cw) {
     ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, VM_OPS, ASM_OPS);
     
     // Arithmetic operations (this could be made DRYer, but I think it's more clear when written out)
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "add", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "sub", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_CMP_BASE_CMD, "eq", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_CMP_BASE_CMD, "gt", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_CMP_BASE_CMD, "lt", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_BOOL_BASE_CMD, "and", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_BOOL_BASE_CMD, "or", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_UNARY_BASE_CMD, "neg", vm_op_to_asm));
-    fprintf(cw, "%s\n", gen_arith_cmd(ARITH_UNARY_BASE_CMD, "not", vm_op_to_asm));
+    char *add_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "add", vm_op_to_asm);
+    char *sub_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "sub", vm_op_to_asm);
+    char *eq_op = gen_arith_cmd(ARITH_CMP_BASE_CMD, "eq", vm_op_to_asm);
+    char *gt_op = gen_arith_cmd(ARITH_CMP_BASE_CMD, "gt", vm_op_to_asm);
+    char *lt_op = gen_arith_cmd(ARITH_CMP_BASE_CMD, "lt", vm_op_to_asm);
+    char *and_op = gen_arith_cmd(ARITH_BOOL_BASE_CMD, "and", vm_op_to_asm);
+    char *or_op = gen_arith_cmd(ARITH_BOOL_BASE_CMD, "or", vm_op_to_asm);
+    char *neg_op = gen_arith_cmd(ARITH_UNARY_BASE_CMD, "neg", vm_op_to_asm);
+    char *not_op = gen_arith_cmd(ARITH_UNARY_BASE_CMD, "not", vm_op_to_asm);
+    fprintf(out, "%s\n", add_op);
+    fprintf(out, "%s\n", sub_op);
+    fprintf(out, "%s\n", eq_op);
+    fprintf(out, "%s\n", gt_op);
+    fprintf(out, "%s\n", lt_op);
+    fprintf(out, "%s\n", and_op);
+    fprintf(out, "%s\n", or_op);
+    fprintf(out, "%s\n", neg_op);
+    fprintf(out, "%s\n", not_op);
+    reinit_char(&add_op);
+    reinit_char(&sub_op);
+    reinit_char(&eq_op);
+    reinit_char(&gt_op);
+    reinit_char(&lt_op);
+    reinit_char(&and_op);
+    reinit_char(&or_op);
+    reinit_char(&neg_op);
+    reinit_char(&not_op);
+    
 
     ht_delete(vm_op_to_asm);
 
     // Assists jump back to primary program flow after arithmetic operations
-    fprintf(cw, "%s\n", ARITH_OP_END);
+    fprintf(out, "%s\n", ARITH_OP_END);
 
     // Enables true/false operations
-    fprintf(cw, "%s\n", TF_FUNC);
+    fprintf(out, "%s\n", TF_FUNC);
+
+    if (out != NULL) {
+        fclose(out);
+        cw->out = NULL;
+    }
+    if (cw->in_name != NULL) {
+        reinit_char(&(cw->in_name));
+    }
+    if (cw != NULL) {
+        free(cw);
+        cw = NULL;
+    }
 }

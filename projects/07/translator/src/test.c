@@ -147,53 +147,75 @@ static char *test_parser() {
 
 static char *test_code_writer() {
     // Test VM_Code_Writer()
-    char *file_input_path = "./src/test/Test.vm";
-    FILE *file_output_file = VM_Code_Writer(file_input_path);
+    const char *file_path = "./src/test/Test.vm";
+    const char *folder_path = "./src/test/TestDir/";
+    int file_path_len = strlen(file_path);
+    int folder_path_len = strlen(folder_path);
+    char *heap_file_path = calloc(file_path_len + 1, sizeof(char));
+    char *heap_folder_path = calloc(folder_path_len + 1, sizeof(char));
+
+    strncpy(heap_file_path, file_path, file_path_len);
+    heap_file_path[file_path_len] = '\0';
+    strncpy(heap_folder_path, folder_path, folder_path_len);
+    heap_folder_path[folder_path_len] = '\0';
+
+    code_writer *file_code_writer = calloc(1, sizeof(code_writer));
+    file_code_writer->in_name = calloc(file_path_len, sizeof(char));
+    file_code_writer->out = NULL;
+    code_writer *folder_code_writer = calloc(1, sizeof(code_writer));
+    folder_code_writer->in_name = calloc(folder_path_len, sizeof(char));
+    folder_code_writer->out = NULL;
+
+    VM_Code_Writer(heap_file_path, file_code_writer);
+    VM_Code_Writer(heap_folder_path, folder_code_writer);
+
+    const char *file_in_name = "Test";
+    int file_in_name_len = strlen(file_in_name);
+    strncpy(file_code_writer->in_name, file_in_name, file_in_name_len);
+    file_code_writer->in_name[file_in_name_len] = '\0';
+
     mu_assert("VM_Code_Writer did not open the correct output file given an file path as input",
-        same_file(fileno(file_output_file), open("./src/test/Test.asm", 'r')));
-
-    char *folder_input_path = "./src/test/TestDir/";
-    FILE *folder_output_file = VM_Code_Writer(folder_input_path);
+        same_file(fileno(file_code_writer->out), open("./src/test/Test.asm", 'r')));
     mu_assert("VM_Code_Writer did not open the correct output file given a folder path as input",
-        same_file(fileno(folder_output_file), open("./src/test/TestDir.asm", 'a')));
-    fclose(folder_output_file);
+        same_file(fileno(folder_code_writer->out), open("./src/test/TestDir.asm", 'a')));
 
+    free(heap_folder_path);
+    free(heap_file_path);
+
+    vm_code_writer_close(folder_code_writer);
 
     // Test vm_write_command()
     mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_INVALID",
-        vm_write_command("asdf", C_INVALID, file_output_file) == WC_INVALID_CMD);
+        vm_write_command("asdf", C_INVALID, file_code_writer) == WC_INVALID_CMD);
     mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_PUSH with no arguments",
-        vm_write_command("push", C_PUSH, file_output_file) == WC_INVALID_CMD);
+        vm_write_command("push", C_PUSH, file_code_writer) == WC_INVALID_CMD);
     mu_assert("vm_write_command did not return WC_INVALID_CMD when given a command of type C_POP with a negative index",
-        vm_write_command("pop local -1", C_POP, file_output_file) == WC_INVALID_CMD);
+        vm_write_command("pop local -1", C_POP, file_code_writer) == WC_INVALID_CMD);
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_PUSH command",
-        vm_write_command("push constant 2", C_PUSH, file_output_file) == WC_SUCCESS);
+        vm_write_command("push constant 2", C_PUSH, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_POP command",
-        vm_write_command("pop local 1", C_POP, file_output_file) == WC_SUCCESS);
+        vm_write_command("pop local 1", C_POP, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_ARITHMETIC command",
-        vm_write_command("add", C_ARITHMETIC, file_output_file) == WC_SUCCESS);
+        vm_write_command("add", C_ARITHMETIC, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_LABEL",
-        vm_write_command("label test", C_LABEL, file_output_file) == WC_UNSUPPORTED_CMD);
+        vm_write_command("label test", C_LABEL, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_GOTO",
-        vm_write_command("goto func", C_GOTO, file_output_file) == WC_UNSUPPORTED_CMD);
+        vm_write_command("goto func", C_GOTO, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_IF",
-        vm_write_command("if-goto end", C_IF, file_output_file) == WC_UNSUPPORTED_CMD);
+        vm_write_command("if-goto end", C_IF, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_FUNCTION",
-        vm_write_command("function mult 2", C_FUNCTION, file_output_file) == WC_UNSUPPORTED_CMD);
+        vm_write_command("function mult 2", C_FUNCTION, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_RETURN",
-        vm_write_command("return", C_RETURN, file_output_file) == WC_UNSUPPORTED_CMD);
+        vm_write_command("return", C_RETURN, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_CALL",
-        vm_write_command("call mult 2", C_CALL, file_output_file) == WC_UNSUPPORTED_CMD);
+        vm_write_command("call mult 2", C_CALL, file_code_writer) == WC_UNSUPPORTED_CMD);
 
-    fclose(file_output_file);
+    // Test vm_translate_push_pop()
+    char *translate_push_constant_59 = vm_translate_push_pop(CONSTANT, 59, C_PUSH, file_code_writer->in_name);
 
-
-    // Test vm_translate_push()
-    char *translate_push_constant_59 = vm_translate_push(CONSTANT, 59);
-
-    mu_assert("vm_translate_push did not return NULL when given memory segment SEG_INVALID",
-        vm_translate_push(SEG_INVALID, 2) == NULL);
-    mu_assert("vm_translate_push did not return the correct set of commands given index 59 of segment CONSTANT",
+    mu_assert("vm_translate_push_pop did not return NULL when pushing to memory segment SEG_INVALID",
+        vm_translate_push_pop(SEG_INVALID, 2, C_PUSH, file_code_writer->in_name) == NULL);
+    mu_assert("vm_translate_push_pop did not return the correct set of commands when pushing to index 59 of segment CONSTANT",
         !strcmp(translate_push_constant_59,
             "@SP\n"
             "M=M+1\n"
@@ -202,11 +224,13 @@ static char *test_code_writer() {
             "@SP\n"
             "A=M-1\n"
             "M=D\n"));
-    mu_assert("vm_translate_push did not return NULL when given segment TEMP", vm_translate_push(TEMP, 3) == NULL);
-    mu_assert("vm_translate_push did not return NULL when given segment TEMP and an out-of-bounds index",
-        vm_translate_push(TEMP, 9) == NULL);
+    // mu_assert("vm_translate_push_pop did not return NULL when pushing to segment TEMP",
+    //     vm_translate_push_pop(TEMP, 3, C_PUSH, file_code_writer->in_name) == NULL);
+    // mu_assert("vm_translate_push_pop did not return NULL when pushing to segment TEMP and given an out-of-bounds index",
+    //     vm_translate_push_pop(TEMP, 9, C_PUSH, file_code_writer->in_name) == NULL);
 
     reinit_char(&translate_push_constant_59);
+    vm_code_writer_close(file_code_writer);
 
 
     // Test vm_translate_arithmetic()
@@ -233,6 +257,89 @@ static char *test_code_writer() {
 
     reinit_char(&translate_add);
     reinit_char(&translate_eq);
+
+
+    // Test vm_translate_push_pop()
+    char *translate_push_const = vm_translate_push_pop(CONSTANT, 23, C_PUSH, "Test");
+    char *translate_push_arg = vm_translate_push_pop(ARG, 8, C_PUSH, "Test");
+    char *translate_pop_local = vm_translate_push_pop(LCL, 2, C_POP, "Test");
+    char *translate_push_temp = vm_translate_push_pop(TEMP, 6, C_PUSH, "Test");
+    char *translate_pop_pointer = vm_translate_push_pop(POINTER, 1, C_POP, "Test");
+    char *translate_push_static = vm_translate_push_pop(STATIC, 2, C_PUSH, "Test");
+    char *translate_pop_static = vm_translate_push_pop(STATIC, 4, C_POP, "Test");
+
+    mu_assert("vm_translate_push_pop doesn't translate `push constant 23` correctly",
+        !strcmp(translate_push_const,
+            "@SP\n"
+            "M=M+1\n"
+            "@23\n"
+            "D=A\n"
+            "@SP\n"
+            "A=M-1\n"
+            "M=D\n"));
+    mu_assert("vm_translate_push_pop doesn't translate `push argument 8` correctly",
+        !strcmp(translate_push_arg,
+            "@ARG\n"
+            "D=M\n"
+            "@8\n"
+            "A=D+A\n"
+            "D=M\n"
+            "@SP\n"
+            "M=M+1\n"
+            "A=M-1\n"
+            "M=D\n"));
+    mu_assert("vm_translate_push_pop doesn't translate `pop local 2` correctly",
+        !strcmp(translate_pop_local,
+            "@LCL\n"
+            "D=M\n"
+            "@2\n"
+            "D=D+A\n"
+            "@R15\n"
+            "M=D\n"
+            "@SP\n"
+            "AM=M-1\n"
+            "D=M\n"
+            "@R15\n"
+            "A=M\n"
+            "M=D\n"));
+    mu_assert("vm_translate_push_pop doesn't translate `push temp 6` correctly",
+        !strcmp(translate_push_temp,
+            "@11\n"
+            "D=M\n"
+            "@SP\n"
+            "M=M+1\n"
+            "A=M-1\n"
+            "M=D\n"));
+    mu_assert("vm_translate_push_pop doesn't translate `pop pointer 1` correctly",
+        !strcmp(translate_pop_pointer,
+            "@SP\n"
+            "AM=M-1\n"
+            "D=M\n"
+            "@4\n"
+            "M=D\n"));
+    mu_assert("vm_translate_push_pop doesn't translate `push static 2` correctly",
+        !strcmp(translate_push_static,
+            "@Test.2\n"
+            "D=M\n"
+            "@SP\n"
+            "M=M+1\n"
+            "A=M-1\n"
+            "M=D\n"));
+    mu_assert("vm_translate_push_pop doesn't translate `pop static 4` correctly",
+        !strcmp(translate_pop_static,
+            "@SP\n"
+            "AM=M-1\n"
+            "D=M\n"
+            "@Test.4\n"
+            "M=D\n"));
+
+    reinit_char(&translate_push_const);
+    reinit_char(&translate_push_arg);
+    reinit_char(&translate_pop_local);
+    reinit_char(&translate_push_temp);
+    reinit_char(&translate_pop_pointer);
+    reinit_char(&translate_push_static);
+    reinit_char(&translate_pop_static);
 
     return 0;
 }

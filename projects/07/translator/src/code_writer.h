@@ -7,12 +7,25 @@
 #include "parser.h"
 
 
+// Stores the file that the code writer writes to, and the name of the .vm file currently being translated
+typedef struct code_writer {
+    // The file to write to
+    FILE *out;
+    char *in_name;
+} code_writer;
+
 // A struct that holds info about a VM memory segment
 typedef struct vm_mem_seg {
-    const char *vm_name;    // The name of the segment in the VM language
-    const char *hack_name;  // The name of the segment's register(s) in Hack
-    const int begin_addr;   // The RAM address of the beginning of the segment
-    const int end_addr;     // The RAM address of the end of the segment
+    // The name of the segment in the VM language
+    char *vm_name;
+    // The name of the segment's register(s) in Hack
+    char *hack_name;
+    // The RAM address of the beginning of the segment
+    int begin_addr;
+    // The RAM address of the end of the segment (must be -1 if this is a segment which is accessed via a pointer
+    // to the beginning of an object elsewhere in memory, and therefore has no hard limit on how large of a segment
+    // it can be)
+    int end_addr;
 } vm_mem_seg;
 
 // Return status types for vm_write_command
@@ -47,12 +60,11 @@ extern const int NUM_ARITH_OPS;
 extern const char *VM_OPS[];
 extern const char *ASM_OPS[];
 
-FILE* VM_Code_Writer(char*);
+void VM_Code_Writer(char*, code_writer*);
 void vm_set_filename(char*);
-vm_wc_status vm_write_command(char*, vm_command_t, FILE*);
+vm_wc_status vm_write_command(char*, vm_command_t, code_writer*);
 char *vm_translate_arithmetic(char*);
-char *vm_translate_push(vm_mem_seg, int);
-char *vm_translate_pop(vm_mem_seg, int);
-void vm_code_writer_close(FILE*);
+char *vm_translate_push_pop(vm_mem_seg, int, vm_command_t, char*);
+void vm_code_writer_close(code_writer*);
 
 #endif
