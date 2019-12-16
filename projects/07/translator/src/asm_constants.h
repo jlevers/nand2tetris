@@ -5,6 +5,7 @@
 extern const char *INIT_SP;
 extern const char *INF_LOOP;
 extern const char *TF_FUNC;
+extern const char *GOTO_ARITH_OP;
 extern const char *ARITH_OP_END;
 extern const char *ARITH_ADDSUB_BASE_CMD;
 extern const char *ARITH_CMP_BASE_CMD;

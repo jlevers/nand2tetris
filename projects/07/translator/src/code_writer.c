@@ -279,22 +279,14 @@ char *vm_translate_arithmetic(char *command) {
     // Removes any extra whitespace, makes sure it's valid, etc.
     char *cmd = vm_arg1(command);
 
-    const char *goto_str =
-        "@POST_ARITH_CALL_%d\n"
-        "D=A\n"
-        "@R13\n"
-        "M=D\n"
-        "@%s\n"
-        "0;JMP\n"
-        "(POST_ARITH_CALL_%d)\n";
     char *goto_label = get_internal_op_label(cmd);
 
-    int goto_str_len = strlen(goto_str);
+    int goto_str_len = strlen(GOTO_ARITH_OP);
     int fmt_specifiers_len = 6;  // Length of "%s" + 2 * length of "%d"
-    int total_len = goto_str_len - fmt_specifiers_len + strlen(goto_label) + 2 * num_digits(num_arith_calls);
+    int total_len = goto_str_len - fmt_specifiers_len + strlen(GOTO_ARITH_OP) + 2 * num_digits(num_arith_calls);
 
     char *encoded_goto = calloc(total_len + 1, sizeof(char));
-    snprintf(encoded_goto, total_len + 1, goto_str, num_arith_calls, goto_label, num_arith_calls);
+    snprintf(encoded_goto, total_len + 1, GOTO_ARITH_OP, num_arith_calls, goto_label, num_arith_calls);
 
     free(goto_label);
     free(cmd);

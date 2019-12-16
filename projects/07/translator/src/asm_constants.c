@@ -40,6 +40,15 @@ const char *TF_FUNC =
     "A=M\n"
     "0;JMP";
 
+const char *GOTO_ARITH_OP =
+    "@POST_ARITH_CALL_%d\n"
+    "D=A\n"
+    "@R13\n"
+    "M=D\n"
+    "@%s\n"
+    "0;JMP\n"
+    "(POST_ARITH_CALL_%d)\n";
+
 const char *ARITH_OP_END =
     "(__END_ARITH_OP)\n"
     "@R13\n"
