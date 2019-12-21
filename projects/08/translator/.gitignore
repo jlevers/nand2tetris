@@ -1,0 +1,4 @@
+test
+translator
+src/test/**/*.asm
+.vscode/
