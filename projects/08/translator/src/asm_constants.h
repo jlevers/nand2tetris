@@ -2,7 +2,7 @@
 #define _VM_ASM_CONSTANTS_H
 
 // .hack assembly snippets
-extern const char *INIT_SP;
+extern const char *INIT;
 extern const char *INF_LOOP;
 extern const char *TF_FUNC;
 extern const char *GOTO_ARITH_OP;

@@ -14,7 +14,7 @@ typedef struct code_writer {
     char *in_name;
 } code_writer;
 
-// A struct that holds info about a VM memory segment
+// Stores info about a VM memory segment
 typedef struct vm_mem_seg {
     // The name of the segment in the VM language
     char *vm_name;
@@ -60,8 +60,9 @@ extern const vm_mem_seg SEG_INVALID;
 void VM_Code_Writer(char*, code_writer*);
 void vm_set_filename(char*);
 vm_wc_status vm_write_command(char*, vm_command_t, code_writer*);
-char *vm_translate_arithmetic(char*);
-char *vm_translate_push_pop(vm_mem_seg, int, vm_command_t, char*);
+char *vm_write_initial(char*);
+char *vm_write_arithmetic(char*);
+char *vm_write_push_pop(vm_mem_seg, int, vm_command_t, char*);
 void vm_code_writer_close(code_writer*);
 
 #endif /* _VM_CODE_WRITER_H */
