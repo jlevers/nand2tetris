@@ -76,7 +76,7 @@ int path_parts_cmp(path_parts *a, path_parts *b) {
  *
  * @param p a double pointer to the path_parts struct to delete
  */
-void del_path_parts(path_parts **p) {
+void path_parts_delete(path_parts **p) {
     if (*p != NULL) {
         if ((*p)->basename != NULL) {
             reinit_char(&((*p)->basename));
@@ -163,6 +163,64 @@ int vm_strcmp(char *a, char *b) {
     }
 
     return diff;
+}
+
+
+/**
+ * Creates a new fmt_str struct. If the given format string is NULL, creates an empty
+ * fmt_str struct.
+ *
+ * @param format_string  the format string to store
+ * @param specifiers_len the number of chars of format specifiers in @format_string
+ * @return               a new fmt_str struct
+ */
+fmt_str *fmt_str_new(const char *format_string, int specifiers_len) {
+    fmt_str *fs = calloc(1, sizeof(fmt_str));
+    if (format_string != NULL) {
+        fs->str = strdup(format_string);
+        fs->fmt_len = specifiers_len;
+    } else {
+        fs->str = NULL;
+        fs->fmt_len = 0;
+    }
+
+    return fs;
+}
+
+
+/**
+ * Computes the length of a format string with the format specifiers removed, or -1 if the
+ * given struct is invalid.
+ *
+ * @param fs the fmt_str to compute the length of
+ * @return   the length of the format string with no format specifiers
+ */
+int fmt_str_len(fmt_str *fs) {
+    int len = -1;
+    if (fs != NULL && fs->str != NULL) {
+        len = strlen(fs->str) - fs->fmt_len;
+    }
+
+    return len;
+}
+
+
+/**
+ * Deletes a fmt_str struct.
+ *
+ * @param fs a double pointer to the fmt_str struct to delete
+ */
+void fmt_str_delete(fmt_str **fs) {
+    if (*fs != NULL) {
+
+        if ((*fs)->str != NULL) {
+            free((*fs)->str);
+            (*fs)->str = NULL;
+        }
+
+        free(*fs);
+        *fs = NULL;
+    }
 }
 
 

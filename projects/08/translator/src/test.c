@@ -405,13 +405,13 @@ static char *test_util() {
         path_parts_cmp(split_path_single_segment, &((path_parts){"", "src"})));
 
 
-    // Test del_path_parts()
+    // Test path_parts_delete()
     // I'm really just testing this by using valgrind to ensure there are no memory leaks
-    del_path_parts(&split_path_dir);
-    del_path_parts(&split_path_dir_trailing_slash);
-    del_path_parts(&split_path_file);
-    del_path_parts(&split_path_relative);
-    del_path_parts(&split_path_single_segment);
+    path_parts_delete(&split_path_dir);
+    path_parts_delete(&split_path_dir_trailing_slash);
+    path_parts_delete(&split_path_file);
+    path_parts_delete(&split_path_relative);
+    path_parts_delete(&split_path_single_segment);
 
 
     // Test remove_fext()
@@ -453,6 +453,35 @@ static char *test_util() {
     mu_assert("vm_strcmp asserts that a non-NULL string is equal to a different non-NULL string", !vm_strcmp(s1, s2) == 0);
     mu_assert("vm_strcmp asserts that a non-NULL string is equal to a NULL string", !vm_strcmp(s2, NULL) == 0);
     mu_assert("vm_strcmp asserts that a NULL string is not equal to NULL", !vm_strcmp(NULL, NULL));
+
+
+    // Test fmt_str_new()
+    const char *str1 = "This string needs to %s formatted";
+    const char *str2 = NULL;
+    fmt_str *fs1 = fmt_str_new(str1, 2);
+    fmt_str *fs2 = fmt_str_new(str2, 7);
+    fmt_str *fs3 = NULL;
+
+    mu_assert("fmt_str_new did not properly initialize a fmt_str when given valid, non-NULL input data",
+        fs1 != NULL && !strcmp(fs1->str, str1) && fs1->fmt_len == 2);
+    mu_assert("fmt_str_new did not properly initialize a fmt_str when given a NULL format string",
+        fs2 != NULL && fs2->str == NULL && fs2->fmt_len == 0);
+
+
+    // Test fmt_str_len()
+    mu_assert("fmt_str_len did not correctly compute the length of a populated fmt_str", fmt_str_len(fs1) == 31);
+    mu_assert("fmt_str_len did not correctly compute the length of a fmt_str with a NULL format string", fmt_str_len(fs2) == -1);
+    mu_assert("fmt_str_len did not correctly compute the length of a NULL fmt_str", fmt_str_len(fs3) == -1);
+
+
+    // Test fmt_str_delete()
+    fmt_str_delete(&fs1);
+    fmt_str_delete(&fs2);
+    fmt_str_delete(&fs3);
+
+    mu_assert("fmt_str_delete did not free/set to NULL a populated fmt_str", fs1 == NULL);
+    mu_assert("fmt_str_delete did not free/set to NULL a populated fmt_str", fs2 == NULL);
+    mu_assert("fmt_str_delete did not leave a NULL fmt_str as NULL", fs3 == NULL);
 
 
     // Test reinit_char()

@@ -28,7 +28,7 @@ void process_file(char *in_path, code_writer *cw) {
     fclose(infile);
     reinit_char(&infile_name_noext);
     reinit_char(&(cw->in_name));
-    del_path_parts(&in_path_parts);
+    path_parts_delete(&in_path_parts);
 }
 
 
