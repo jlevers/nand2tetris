@@ -6,13 +6,8 @@
 #include "parser.h"
 #include "vm_constants.h"
 
-#ifndef _VM_PARSER_VARS
-#define _VM_PARSER_VARS
-
 const char BEGIN_COMMENT = '/';
 const char EOL = '\n';
-
-#endif
 
 
 /**

@@ -1,8 +1,5 @@
 #include <stdlib.h>
 
-#ifndef _VM_ASM_CONSTANTS
-#define _VM_ASM_CONSTANTS
-
 /*
  * NOTES
  * -----
@@ -178,5 +175,3 @@ const char *POP_STATIC_SEG =
 
 const int NUM_ARITH_OPS = 9;
 const char *ASM_OPS[] = {"+", "-", "-", "EQ", "GT", "LT", "&", "|", "!", NULL};
-
-#endif

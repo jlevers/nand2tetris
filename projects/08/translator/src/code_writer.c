@@ -10,9 +10,6 @@
 #include "../../../lib/hash_table.h"
 
 
-#ifndef _VM_CODE_WRITER_VARS
-#define _VM_CODE_WRITER_VARS
-
 const char *FOUT_EXT = ".asm";
 
 // See code_writer.h for details on how vm_mem_seg is used
@@ -32,9 +29,6 @@ const vm_mem_seg STACK = {"stack", NULL, 256, 2047};
 const vm_mem_seg HEAP = {"heap", NULL, 2048, 16483};
 const vm_mem_seg MEMMAP_IO = {"io", NULL, 16384, 24575};
 const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
-
-
-#endif
 
 
 /* STATIC VARIABLES */

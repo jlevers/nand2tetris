@@ -6,12 +6,7 @@
 
 #include "util.h"
 
-#ifndef _VM_UTIL_VARS
-#define _VM_UTIL_VARS
-
 const char DIR_SEP = '/';
-
-#endif
 
 
 /************************/
