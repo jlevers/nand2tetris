@@ -26,4 +26,4 @@ vm_command_t vm_command_type(char*);
 char *vm_arg1(char*);
 int vm_arg2(char*);
 
-#endif
+#endif /* _VM_PARSER_H */

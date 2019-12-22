@@ -23,4 +23,4 @@ extern const char *POP_STATIC_SEG;
 extern const int NUM_ARITH_OPS;
 extern const char *ASM_OPS[];
 
-#endif
+#endif /* _VM_ASM_CONSTANTS_H */

@@ -21,4 +21,4 @@ int vm_strcmp(char*, char*);
 void reinit_char(char**);
 int num_digits(int);
 
-#endif
+#endif /* _VM_UTIL_H */

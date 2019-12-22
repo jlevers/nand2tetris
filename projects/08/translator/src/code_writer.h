@@ -64,4 +64,4 @@ char *vm_translate_arithmetic(char*);
 char *vm_translate_push_pop(vm_mem_seg, int, vm_command_t, char*);
 void vm_code_writer_close(code_writer*);
 
-#endif
+#endif /* _VM_CODE_WRITER_H */

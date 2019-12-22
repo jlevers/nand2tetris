@@ -14,4 +14,4 @@ extern const char *ARITHMETIC_OPS[10];
 extern const int ARITHMETIC_OPS_NUM_ARGS[9];
 extern const int SHORTEST_OP_LEN;
 
-#endif
+#endif /* _VM_CONSTANTS_H */
