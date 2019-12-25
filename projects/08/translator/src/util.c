@@ -230,8 +230,10 @@ void fmt_str_delete(fmt_str **fs) {
  * @param to_process  A double pointer to a string
  */
 void reinit_char(char **to_process) {
-    free(*to_process);
-    *to_process = NULL;
+    if (*to_process != NULL) {
+        free(*to_process);
+        *to_process = NULL;
+    }
 }
 
 

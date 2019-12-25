@@ -12,3 +12,13 @@ const char *RETURN_OP = "return";
 
 const int ARITHMETIC_OPS_NUM_ARGS[9] = {2, 2, 1, 2, 2, 2, 2, 2, 1};
 const int SHORTEST_OP_LEN = 2;
+
+// Each inner array is a range of characters that are allowed in label names
+const char LABEL_CHAR_RANGES[6][2] = {
+    {'0', '9'},
+    {'a', 'z'},
+    {'A', 'Z'},
+    {'_', '_'},
+    {'.', '.'},
+    {':', ':'}
+};

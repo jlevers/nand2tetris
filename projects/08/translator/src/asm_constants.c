@@ -213,3 +213,7 @@ const fmt_str POP_STATIC_SEG = {
     4
 };
 
+
+
+const fmt_str LABEL = {"(%s:%s)\n", 4};
+

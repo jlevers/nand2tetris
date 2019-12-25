@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-// General use 
+// General use
 extern const fmt_str INIT;
 extern const char *INF_LOOP;
 extern const char *TF_FUNC;
@@ -27,5 +27,8 @@ extern const fmt_str PUSH_POINTER_SEG;
 extern const fmt_str POP_POINTER_SEG;
 extern const fmt_str PUSH_STATIC_SEG;
 extern const fmt_str POP_STATIC_SEG;
+
+// Related to control flow operations
+extern const fmt_str LABEL;
 
 #endif /* _VM_ASM_CONSTANTS_H */

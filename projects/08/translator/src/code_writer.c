@@ -249,7 +249,7 @@ char *vm_write_initial(char *output_path) {
 
 
 /**
- * Writes a VM command in .hack ASM format.
+ * Writes a VM command in Hack assembly format.
  *
  * @param command      the VM command to translate
  * @param command_type the command type of the VM command
@@ -364,6 +364,43 @@ char *vm_write_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, ch
     }
 
     return push_encoded;
+}
+
+
+/**
+ * Translates a VM label command into Hack assembly code.
+ *
+ * @param func  the VM function that the label is in
+ * @param label the label to translate
+ * @return      the translated Hack code
+ */
+char *vm_write_label(char *func, char *label) {
+    char *create_label = NULL;
+    char ch;
+    int all_valid = 1;
+
+    // Make sure that the label only consists of allowed characters
+    for (int i = 0; i < (int)strlen(label); i++) {
+        ch = label[i];
+        int valid = 0;
+        for (int j = 0; j < (int)(sizeof(LABEL_CHAR_RANGES) / sizeof(LABEL_CHAR_RANGES[0])); j++) {
+            if (ch >= LABEL_CHAR_RANGES[j][0] && ch <= LABEL_CHAR_RANGES[j][1]) {
+                valid = 1;
+            }
+        }
+
+        if (!valid) {
+            all_valid = 0;
+        }
+    }
+
+    if (all_valid) {
+        create_label = fmt_str_printf(&LABEL, strlen(func) + strlen(label), func, label);
+    } else {
+        printf("[ERR] Invalid label name %s in function %s", label, func);
+    }
+
+    return create_label;
 }
 
 

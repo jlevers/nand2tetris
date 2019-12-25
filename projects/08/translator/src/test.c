@@ -341,6 +341,18 @@ static char *test_code_writer() {
     reinit_char(&translate_push_static);
     reinit_char(&translate_pop_static);
 
+
+    // Test vm_write_label()
+    char *valid_label = vm_write_label("test", "abc_123.foo:bar");
+    char *invalid_label = vm_write_label("test", "going-wild?");
+
+    mu_assert("vm_write_label does not successfully define a valid label",
+        !strcmp(valid_label, "(test:abc_123.foo:bar)\n"));
+    mu_assert("vm_write_label translates a label with invalid characters", invalid_label == NULL);
+
+    reinit_char(&valid_label);
+    reinit_char(&invalid_label);
+
     return 0;
 }
 

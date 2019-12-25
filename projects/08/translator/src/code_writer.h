@@ -63,6 +63,7 @@ vm_wc_status vm_write_command(char*, vm_command_t, code_writer*);
 char *vm_write_initial(char*);
 char *vm_write_arithmetic(char*);
 char *vm_write_push_pop(vm_mem_seg, int, vm_command_t, char*);
+char *vm_write_label(char*, char*);
 void vm_code_writer_close(code_writer*);
 
 #endif /* _VM_CODE_WRITER_H */
