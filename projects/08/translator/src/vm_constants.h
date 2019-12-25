@@ -17,4 +17,6 @@ extern const int SHORTEST_OP_LEN;
 
 extern const char LABEL_CHAR_RANGES[6][2];
 
+extern const char *DEFAULT_FUNC_NAME;
+
 #endif /* _VM_CONSTANTS_H */

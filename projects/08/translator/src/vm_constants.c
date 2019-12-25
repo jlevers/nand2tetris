@@ -22,3 +22,5 @@ const char LABEL_CHAR_RANGES[6][2] = {
     {'.', '.'},
     {':', ':'}
 };
+
+const char *DEFAULT_FUNC_NAME = "default";

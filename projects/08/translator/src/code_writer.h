@@ -12,6 +12,7 @@ typedef struct code_writer {
     // The file to write to
     FILE *out;
     char *in_name;
+    char *func;
 } code_writer;
 
 // Stores info about a VM memory segment
@@ -65,5 +66,10 @@ char *vm_write_arithmetic(char*);
 char *vm_write_push_pop(vm_mem_seg, int, vm_command_t, char*);
 char *vm_write_label(char*, char*);
 void vm_code_writer_close(code_writer*);
+
+code_writer *cw_new(FILE*, char*);
+void cw_set_func(code_writer*, char*);
+void cw_set_in_name(code_writer*, char*);
+void cw_delete(code_writer**);
 
 #endif /* _VM_CODE_WRITER_H */

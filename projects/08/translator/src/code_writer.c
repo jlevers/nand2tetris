@@ -465,12 +465,81 @@ void vm_code_writer_close(code_writer *cw) {
     if (out != NULL) {
         fclose(out);
         cw->out = NULL;
+/**
+ * Initializes and returns a code_writer struct. The func field is set to DEFAULT_FUNC_NAME from vm_constants.h.
+ *
+ * @param outfile     the file to write translated Hack code to
+ * @param infile_name the name of the .vm file being read
+ * @return            a new code_writer
+ */
+code_writer *cw_new(FILE *outfile, char *infile_name) {
+    code_writer *cw = calloc(1, sizeof(code_writer));
+    cw->out = outfile;
+    if (infile_name != NULL) {
+        cw->in_name = strdup(infile_name);
+    } else {
+        cw->in_name = NULL;
     }
+    cw->func = strdup(DEFAULT_FUNC_NAME);
+
+    return cw;
+}
+
+
+/**
+ * Sets the in_name field of a code_writer struct.
+ *
+ * @param cw      the code_writer on which to set the in_name field
+ * @param in_name the new in_name for @cw
+ */
+void cw_set_in_name(code_writer *cw, char *in_name){
     if (cw->in_name != NULL) {
         reinit_char(&(cw->in_name));
     }
-    if (cw != NULL) {
-        free(cw);
-        cw = NULL;
+
+    if (in_name != NULL) {
+        cw->in_name = strdup(in_name);
+    } else {
+        cw->in_name = NULL;
+    }
+}
+
+
+/**
+ * Sets the func field of a code_writer struct.
+ *
+ * @param cw   the code_writer on which to set the func field
+ * @param func the new func name
+ */
+void cw_set_func(code_writer *cw, char *func) {
+    reinit_char(&(cw->func));
+
+    if (func != NULL) {
+        cw->func = strdup(func);
+    } else {
+        cw->func = NULL;
+    }
+}
+
+
+/**
+ * Deletes a code_writer struct.
+ *
+ * @param cw the code_writer to delete
+ */
+void cw_delete(code_writer **cw) {
+    if ((*cw)->out != NULL) {
+        fclose((*cw)->out);
+        (*cw)->out = NULL;
+    }
+    if ((*cw)->in_name != NULL) {
+        reinit_char(&((*cw)->in_name));
+    }
+    if ((*cw)->func != NULL) {
+        reinit_char(&((*cw)->func));
+    }
+    if (*cw != NULL) {
+        free(*cw);
+        *cw = NULL;
     }
 }

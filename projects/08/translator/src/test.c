@@ -146,6 +146,46 @@ static char *test_parser() {
 }
 
 static char *test_code_writer() {
+    // Test cw_new()
+    FILE *test_out = fopen("./src/test/TestOut.asm", "a");  // This doesn't need to be closed since it's closed by cw_delete
+    code_writer *cw1 = cw_new(test_out, "Asdf");
+    code_writer *cw2 = cw_new(NULL, NULL);
+
+    mu_assert("cw_new did not correctly set the output file when given an open file handle",
+        same_file(fileno(cw1->out), open("./src/test/TestOut.asm", 'r')));
+    mu_assert("cw_new did not set the output file to NULL when given a NULL file handle", cw2->out == NULL);
+    mu_assert("cw_new did not correctly set the code_writer's in_file", !strcmp(cw1->in_name, "Asdf"));
+    mu_assert("cw_new did not set the code_writer's in_file to NULL when given a NULL in_file arg", cw2->in_name == NULL);
+    mu_assert("cw_new did not set the code_writer's function to the default correctly", !strcmp(cw1->func, "default"));
+
+
+    // Test cw_set_in_name()
+    cw_set_in_name(cw1, "qwer");
+    cw_set_in_name(cw2, "something");
+
+    mu_assert("cw_set_in_name did not correctly set an already-defined in_file field", !strcmp(cw1->in_name, "qwer"));
+    mu_assert("cw_set_in_name did not correctly set an initially NULL in_file field", !strcmp(cw2->in_name, "something"));
+    cw_set_in_name(cw1, NULL);
+    mu_assert("cw_set_in_name did not correctly set an in_file field to NULL", cw1->in_name == NULL);
+
+
+    // Test cw_set_func
+    cw_set_func(cw1, "foo");
+    cw_set_func(cw2, NULL);
+
+    mu_assert("cw_set_func did not correctly set an already-defined func field", !strcmp(cw1->func, "foo"));
+    mu_assert("cw_set_func did not correctly set a func field to NULL", cw2->func == NULL);
+    cw_set_func(cw2, "def");
+    mu_assert("cw_set_func did not correctly set a NULL func field to a non-NULL value", !strcmp(cw2->func, "def"));
+
+
+    // Test cw_delete()
+    cw_delete(&cw1);
+    cw_delete(&cw2);
+
+    mu_assert("cw_delete did not fully delete test code_writers cw1 and cw2", cw1 == NULL && cw2 == NULL);
+
+
     // Test VM_Code_Writer()
     const char *file_path = "./src/test/Test.vm";
     const char *folder_path = "./src/test/TestDir/";
