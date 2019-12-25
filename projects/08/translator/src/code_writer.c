@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -150,6 +151,26 @@ static char *gen_arith_cmd(const char *base_cmd, char *op, ht_hash_table *op_map
     return encoded_cmd;
 }
 
+
+/**
+ * Returns a filled-in version of a fmt_str, given a list of variables to substitute in, and their total string length.
+ * Essentially a wrapper around vsnprintf().
+ *
+ * @param fs the fmt_str struct to fill in
+ * @param sub_len the total length of all variables being substituted into @fs
+ * @param ...     a list of variables to substitute into @fs
+ * @return        the completed version of @fs, with all format specifiers replaced with the substitute variables
+ */
+static char *fmt_str_printf(const fmt_str *fs, int sub_len, ...) {
+    int final_str_len = fmt_str_len(fs) + sub_len;
+    char *final_str = calloc(final_str_len + 1, sizeof(char));
+    va_list args, args_cpy;
+    va_start(args, sub_len);
+    va_copy(args_cpy, args);
+    vsnprintf(final_str, final_str_len + 1, fs->str, args_cpy);
+    return final_str;
+}
+
 /* END STATIC FUNCTIONS */
 
 
@@ -218,12 +239,10 @@ void VM_Code_Writer(char *input_path, code_writer *cw) {
  * @return a string containing the bootstrapping assembly code
  */
 char *vm_write_initial(char *output_path) {
-    fmt_str *initial_fmt_str = fmt_str_new(INIT, 2);
-    int initial_len = fmt_str_len(initial_fmt_str) + strlen(output_path);
+    int initial_len = fmt_str_len(&INIT) + strlen(output_path);
     char *initial = calloc(initial_len + 1, sizeof(char));
 
-    snprintf(initial, initial_len + 1, INIT, output_path);
-    fmt_str_delete(&initial_fmt_str);
+    snprintf(initial, initial_len + 1, INIT.str, output_path);
 
     return initial;
 }
@@ -288,16 +307,11 @@ char *vm_write_arithmetic(char *command) {
     // Removes any extra whitespace, makes sure it's valid, etc.
     char *cmd = vm_arg1(command);
 
-
     char *goto_label = get_internal_op_label(cmd);
-
-    fmt_str *goto_fmt_str = fmt_str_new(GOTO_ARITH_OP, 6);
-    int total_len = fmt_str_len(goto_fmt_str) + strlen(goto_label) + 2 * num_digits(num_arith_calls);
-
+    int total_len = fmt_str_len(&GOTO_ARITH_OP) + strlen(goto_label) + 2 * num_digits(num_arith_calls);
     char *encoded_goto = calloc(total_len + 1, sizeof(char));
-    snprintf(encoded_goto, total_len + 1, goto_fmt_str->str, num_arith_calls, goto_label, num_arith_calls);
+    snprintf(encoded_goto, total_len + 1, GOTO_ARITH_OP.str, num_arith_calls, goto_label, num_arith_calls);
 
-    fmt_str_delete(&goto_fmt_str);
     free(goto_label);
     free(cmd);
 
@@ -321,8 +335,6 @@ char *vm_write_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, ch
     // The value to push onto the stack is the value starting at the index-th value in 
     // the given segment
     int mem_addr = index + segment.begin_addr;
-    fmt_str *fs = NULL;
-    int translated_len;
 
     if (segcmp(segment, SEG_INVALID)) {
         printf("[ERR] Invalid memory segment %s\n", segment.vm_name == NULL ? "(unnamed segment)" : segment.vm_name);
@@ -338,25 +350,15 @@ char *vm_write_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, ch
          * Since the constant "segment" is a virtual segment with no RAM associated with it,
          * the "pop" command cannot be used with it.
          */
-        fs = fmt_str_new(PUSH_CONSTANT_SEG, 2);
-        translated_len = fmt_str_len(fs) + num_digits(mem_addr);
-        push_encoded = calloc(translated_len + 1, sizeof(char));
-        snprintf(push_encoded, translated_len + 1, fs->str, mem_addr);
+        push_encoded = fmt_str_printf(&PUSH_CONSTANT_SEG, num_digits(mem_addr), mem_addr);
     } else if (segcmp(segment, LCL) || segcmp(segment, ARG) || segcmp(segment, THIS) || segcmp(segment, THAT)) {
-        fs = fmt_str_new(cmd_type == C_PUSH ? PUSH_VIRTUAL_SEG : POP_VIRTUAL_SEG, 4);
-        translated_len = fmt_str_len(fs) + strlen(segment.hack_name) + num_digits(index);
-        push_encoded = calloc(translated_len + 1, sizeof(char));
-        snprintf(push_encoded, translated_len + 1, fs->str, segment.hack_name, index);
+        push_encoded = fmt_str_printf(cmd_type == C_PUSH ? &PUSH_VIRTUAL_SEG : &POP_VIRTUAL_SEG,
+            strlen(segment.hack_name) + num_digits(index),
+            segment.hack_name, index);
     } else if (segcmp(segment, POINTER) || segcmp(segment, TEMP)) {
-        fs = fmt_str_new(cmd_type == C_PUSH ? PUSH_POINTER_SEG : POP_POINTER_SEG, 2);
-        translated_len = fmt_str_len(fs) + num_digits(mem_addr);
-        push_encoded = calloc(translated_len + 1, sizeof(char));
-        snprintf(push_encoded, translated_len + 1, fs->str, mem_addr);
+        push_encoded = fmt_str_printf(cmd_type == C_PUSH ? &PUSH_POINTER_SEG : &POP_POINTER_SEG, num_digits(mem_addr), mem_addr);
     } else if (segcmp(segment, STATIC)) {
-        fs = fmt_str_new(cmd_type == C_PUSH ? PUSH_STATIC_SEG : POP_STATIC_SEG, 4);
-        translated_len = fmt_str_len(fs) + strlen(in_fname) + num_digits(index);
-        push_encoded = calloc(translated_len + 1, sizeof(char));
-        snprintf(push_encoded, translated_len + 1, fs->str, in_fname, index);
+        push_encoded = fmt_str_printf(cmd_type == C_PUSH ? &PUSH_STATIC_SEG : &POP_STATIC_SEG, strlen(in_fname) + num_digits(index), in_fname, index);
     } else {
         printf("[ERR] Pushing from the segment %s is not supported\n", segment.vm_name);
     }
@@ -383,18 +385,18 @@ void vm_code_writer_close(code_writer *cw) {
 
     // A map of VM operations (add, sub, etc) and the assembly commands associated with them
     ht_hash_table *vm_op_to_asm = ht_new(NUM_ARITH_OPS);
-    ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, ARITHMETIC_OPS, ASM_OPS);
+    ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, ARITHMETIC_OPS, HACK_ARITH_OPS);
     
     // Arithmetic operations (this could be made DRYer, but I think it's more clear when written out)
-    char *add_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "add", vm_op_to_asm);
-    char *sub_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD, "sub", vm_op_to_asm);
-    char *eq_op = gen_arith_cmd(ARITH_CMP_BASE_CMD, "eq", vm_op_to_asm);
-    char *gt_op = gen_arith_cmd(ARITH_CMP_BASE_CMD, "gt", vm_op_to_asm);
-    char *lt_op = gen_arith_cmd(ARITH_CMP_BASE_CMD, "lt", vm_op_to_asm);
-    char *and_op = gen_arith_cmd(ARITH_BOOL_BASE_CMD, "and", vm_op_to_asm);
-    char *or_op = gen_arith_cmd(ARITH_BOOL_BASE_CMD, "or", vm_op_to_asm);
-    char *neg_op = gen_arith_cmd(ARITH_UNARY_BASE_CMD, "neg", vm_op_to_asm);
-    char *not_op = gen_arith_cmd(ARITH_UNARY_BASE_CMD, "not", vm_op_to_asm);
+    char *add_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD.str, "add", vm_op_to_asm);
+    char *sub_op = gen_arith_cmd(ARITH_ADDSUB_BASE_CMD.str, "sub", vm_op_to_asm);
+    char *eq_op = gen_arith_cmd(ARITH_CMP_BASE_CMD.str, "eq", vm_op_to_asm);
+    char *gt_op = gen_arith_cmd(ARITH_CMP_BASE_CMD.str, "gt", vm_op_to_asm);
+    char *lt_op = gen_arith_cmd(ARITH_CMP_BASE_CMD.str, "lt", vm_op_to_asm);
+    char *and_op = gen_arith_cmd(ARITH_BOOL_BASE_CMD.str, "and", vm_op_to_asm);
+    char *or_op = gen_arith_cmd(ARITH_BOOL_BASE_CMD.str, "or", vm_op_to_asm);
+    char *neg_op = gen_arith_cmd(ARITH_UNARY_BASE_CMD.str, "neg", vm_op_to_asm);
+    char *not_op = gen_arith_cmd(ARITH_UNARY_BASE_CMD.str, "not", vm_op_to_asm);
     fprintf(out, "%s\n", add_op);
     fprintf(out, "%s\n", sub_op);
     fprintf(out, "%s\n", eq_op);

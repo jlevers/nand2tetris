@@ -195,7 +195,7 @@ fmt_str *fmt_str_new(const char *format_string, int specifiers_len) {
  * @param fs the fmt_str to compute the length of
  * @return   the length of the format string with no format specifiers
  */
-int fmt_str_len(fmt_str *fs) {
+int fmt_str_len(const fmt_str *fs) {
     int len = -1;
     if (fs != NULL && fs->str != NULL) {
         len = strlen(fs->str) - fs->fmt_len;

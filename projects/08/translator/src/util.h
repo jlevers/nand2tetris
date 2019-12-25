@@ -27,7 +27,7 @@ char *remove_fext(char*);
 void toupper_str(char*, char*);
 int vm_strcmp(char*, char*);
 fmt_str *fmt_str_new(const char*, int);
-int fmt_str_len(fmt_str*);
+int fmt_str_len(const fmt_str*);
 void fmt_str_delete(fmt_str**);
 void reinit_char(char**);
 int num_digits(int);
