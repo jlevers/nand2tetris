@@ -58,7 +58,7 @@ extern const vm_mem_seg MEMMAP_IO;
 extern const vm_mem_seg SEG_INVALID;
 
 
-void VM_Code_Writer(char*, code_writer*);
+code_writer *VM_Code_Writer(char*);
 void vm_set_filename(char*);
 vm_wc_status vm_write_command(char*, vm_command_t, code_writer*);
 char *vm_write_initial(char*);

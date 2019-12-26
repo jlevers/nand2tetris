@@ -189,30 +189,12 @@ static char *test_code_writer() {
     // Test VM_Code_Writer()
     const char *file_path = "./src/test/Test.vm";
     const char *folder_path = "./src/test/TestDir/";
-    int file_path_len = strlen(file_path);
-    int folder_path_len = strlen(folder_path);
-    char *heap_file_path = calloc(file_path_len + 1, sizeof(char));
-    char *heap_folder_path = calloc(folder_path_len + 1, sizeof(char));
+    char *heap_file_path = strdup(file_path);
+    char *heap_folder_path = strdup(folder_path);
 
-    strncpy(heap_file_path, file_path, file_path_len);
-    heap_file_path[file_path_len] = '\0';
-    strncpy(heap_folder_path, folder_path, folder_path_len);
-    heap_folder_path[folder_path_len] = '\0';
-
-    code_writer *file_code_writer = calloc(1, sizeof(code_writer));
-    file_code_writer->in_name = calloc(file_path_len, sizeof(char));
-    file_code_writer->out = NULL;
-    code_writer *folder_code_writer = calloc(1, sizeof(code_writer));
-    folder_code_writer->in_name = calloc(folder_path_len, sizeof(char));
-    folder_code_writer->out = NULL;
-
-    VM_Code_Writer(heap_file_path, file_code_writer);
-    VM_Code_Writer(heap_folder_path, folder_code_writer);
-
-    const char *file_in_name = "Test";
-    int file_in_name_len = strlen(file_in_name);
-    strncpy(file_code_writer->in_name, file_in_name, file_in_name_len);
-    file_code_writer->in_name[file_in_name_len] = '\0';
+    code_writer *file_code_writer = VM_Code_Writer(heap_file_path);
+    code_writer *folder_code_writer = VM_Code_Writer(heap_folder_path);
+    cw_set_in_name(file_code_writer, "Test");
 
     mu_assert("VM_Code_Writer did not open the correct output file given an file path as input",
         same_file(fileno(file_code_writer->out), open("./src/test/Test.asm", 'r')));

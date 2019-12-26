@@ -175,7 +175,7 @@ static char *fmt_str_printf(const fmt_str *fs, int sub_len, ...) {
 
 
 /**
- * Populates the code_writer struct to use to write the assembly code that reuslts from translating the input
+ * Produces the code_writer struct to use to write the assembly code that reuslts from translating the input
  * file(s).
  * 
  * If @input_path is a path to a file, the output file will be named the same thing as the
@@ -183,12 +183,12 @@ static char *fmt_str_printf(const fmt_str *fs, int sub_len, ...) {
  * folder, the output file will have the same name as the input folder, with the file extension FOUT_EXT
  * added. In both cases, the output file will be created in the folder that contains the input file/folder.
  * 
- * @cw will initially have its in_name field set to NULL.
+ * The returned code_writer will initially have its in_name field set to NULL.
  *
  * @param input_path the path to the file or folder being translated to assembly
- * @param cw         the code_writer struct to use for translation
+ * @return           the code_writer struct to use for translation
  */
-void VM_Code_Writer(char *input_path, code_writer *cw) {
+code_writer *VM_Code_Writer(char *input_path) {
     path_parts *input_parts = calloc(1, sizeof(path_parts));
     input_parts->basename = calloc(strlen(input_path) + 1, sizeof(char));
     input_parts->dirname = calloc(strlen(input_path) + 1, sizeof(char));
@@ -214,11 +214,12 @@ void VM_Code_Writer(char *input_path, code_writer *cw) {
     strncat(output_path, outfile_name, outfile_name_len);
 
     FILE *out = fopen(output_path, "w");
+    code_writer *cw = NULL;
 
     if (!out) {
         perror("[ERR] Failed to open VM output file");
     } else {
-        cw->out = out;
+        cw = cw_new(out, NULL);
     }
 
     char *bootstrap = vm_write_initial(output_path);
@@ -229,6 +230,8 @@ void VM_Code_Writer(char *input_path, code_writer *cw) {
     free(outfile_name);
     free(outfile_base_name);
     path_parts_delete(&input_parts);
+
+    return cw;
 }
 
 
@@ -258,24 +261,23 @@ char *vm_write_initial(char *output_path) {
  */
 vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_writer *cw) {
     vm_wc_status status = WC_SUCCESS;
+    char *arg1 = vm_arg1(command);
+    int arg2 = vm_arg2(command);
     char *translated = NULL;
 
     if (command_type == C_PUSH || command_type == C_POP) {
-        char *segment = vm_arg1(command);
-        int index = vm_arg2(command);
-        if (segment != NULL && strlen(segment) && index > -1) {
-            vm_mem_seg seg = seg_to_vm_memseg(segment);
-            translated = vm_write_push_pop(seg, index, command_type, cw->in_name);
+        if (arg1 != NULL && strlen(arg1) && arg2 > -1) {
+            vm_mem_seg seg = seg_to_vm_memseg(arg1);
+            translated = vm_write_push_pop(seg, arg2, command_type, cw->in_name);
         } else {
             const char *err = "[ERR] Result of calling vm_arg1() on command \"%s\" was NULL. "
                               "Cannot translate command\n";
             printf(err, command);
             status = WC_INVALID_CMD;
         }
-        free(segment);
-        segment = NULL;
     } else if (command_type == C_ARITHMETIC) {
-        translated = vm_write_arithmetic(command);
+        arg1 = vm_arg1(command);
+        translated = vm_write_arithmetic(arg1);
     } else if (command_type == C_INVALID) {
         printf("[ERR] Invalid command %s\n", command);
         status = WC_INVALID_CMD;
@@ -291,8 +293,8 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
                " %d\n", command, status);
     }
 
-    free(translated);
-    translated = NULL;
+    reinit_char(&translated);
+    reinit_char(&arg1);
     return status;
 }
 
@@ -304,17 +306,12 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
  * @return        the encoded version of |command|
  */
 char *vm_write_arithmetic(char *command) {
-    // Removes any extra whitespace, makes sure it's valid, etc.
-    char *cmd = vm_arg1(command);
-
-    char *goto_label = get_internal_op_label(cmd);
+    char *goto_label = get_internal_op_label(command);
     int total_len = fmt_str_len(&GOTO_ARITH_OP) + strlen(goto_label) + 2 * num_digits(num_arith_calls);
     char *encoded_goto = calloc(total_len + 1, sizeof(char));
     snprintf(encoded_goto, total_len + 1, GOTO_ARITH_OP.str, num_arith_calls, goto_label, num_arith_calls);
 
     free(goto_label);
-    free(cmd);
-
     num_arith_calls++;
 
     return encoded_goto;
@@ -462,9 +459,10 @@ void vm_code_writer_close(code_writer *cw) {
     // Enables true/false operations
     fprintf(out, "%s\n", TF_FUNC);
 
-    if (out != NULL) {
-        fclose(out);
-        cw->out = NULL;
+    cw_delete(&cw);
+}
+
+
 /**
  * Initializes and returns a code_writer struct. The func field is set to DEFAULT_FUNC_NAME from vm_constants.h.
  *

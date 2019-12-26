@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "tinydir.h"
 #include "util.h"
+#include "vm_constants.h"
 
 
 void process_file(char *in_path, code_writer *cw) {
@@ -16,9 +17,7 @@ void process_file(char *in_path, code_writer *cw) {
     char *line = NULL;
     FILE *infile = fopen(in_path, "r");
 
-    int infile_name_noext_len = strlen(infile_name_noext);
-    strncpy(cw->in_name, infile_name_noext, infile_name_noext_len);
-    cw->in_name[infile_name_noext_len] = '\0';
+    cw_set_in_name(cw, infile_name_noext);
 
     while ((line = vm_advance(infile)) != NULL) {
         vm_write_command(line, vm_command_type(line), cw);
@@ -43,12 +42,8 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    code_writer *cw = calloc(1, sizeof(code_writer));
-    cw->in_name = calloc(strlen(argv[1]), sizeof(char));
-    cw->out = NULL;
-    VM_Code_Writer(argv[1], cw);
+    code_writer *cw = VM_Code_Writer(argv[1]);
     FILE *infile = NULL;
-
 
     if (is_directory(argv[1])) {
         tinydir_dir dir;
