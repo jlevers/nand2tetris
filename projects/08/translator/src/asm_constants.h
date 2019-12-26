@@ -29,6 +29,7 @@ extern const fmt_str PUSH_STATIC_SEG;
 extern const fmt_str POP_STATIC_SEG;
 
 // Related to control flow operations
-extern const fmt_str LABEL;
+extern const fmt_str DEF_LABEL;
+extern const fmt_str GOTO_LABEL;
 
 #endif /* _VM_ASM_CONSTANTS_H */

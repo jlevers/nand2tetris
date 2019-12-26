@@ -153,6 +153,34 @@ static char *gen_arith_cmd(const char *base_cmd, char *op, ht_hash_table *op_map
 
 
 /**
+ * Checks that a VM label contains only allowed characters.
+ *
+ * @param label the label to check
+ * @return      1 if the label is valid, 0 otherwise
+ */
+static int valid_label(char *label) {
+    char ch;
+    int all_valid = 1;
+
+    for (int i = 0; i < (int)strlen(label); i++) {
+        ch = label[i];
+        int valid = 0;
+        for (int j = 0; j < (int)(sizeof(LABEL_CHAR_RANGES) / sizeof(LABEL_CHAR_RANGES[0])); j++) {
+            if (ch >= LABEL_CHAR_RANGES[j][0] && ch <= LABEL_CHAR_RANGES[j][1]) {
+                valid = 1;
+            }
+        }
+
+        if (!valid) {
+            all_valid = 0;
+        }
+    }
+
+    return all_valid;
+}
+
+
+/**
  * Returns a filled-in version of a fmt_str, given a list of variables to substitute in, and their total string length.
  * Essentially a wrapper around vsnprintf().
  *
@@ -171,11 +199,32 @@ static char *fmt_str_printf(const fmt_str *fs, int sub_len, ...) {
     return final_str;
 }
 
+
+/**
+ * Generates the Hack assembly code for a VM label or goto command.
+ *
+ * @param fs the format string to be used to generate the Hack commands
+ * @param func the name of the function that the label is defined in
+ * @param label the name of the label to define or go to
+ * @return      the Hack code to define or go to a VM label
+ */
+static char *gen_label_related_cmd(fmt_str fs, char *func, char *label) {
+    char *cmd = NULL;
+
+    if (valid_label(label)) {
+        cmd = fmt_str_printf(&fs, strlen(func) + strlen(label), func, label);
+    } else {
+        printf("[ERR] Invalid label name %s defined or referenced in function %s\n", label, func);
+    }
+
+    return cmd;
+}
+
 /* END STATIC FUNCTIONS */
 
 
 /**
- * Produces the code_writer struct to use to write the assembly code that reuslts from translating the input
+ * Produces the code_writer struct to use to write the assembly code that results from translating the input
  * file(s).
  * 
  * If @input_path is a path to a file, the output file will be named the same thing as the
@@ -278,6 +327,10 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
     } else if (command_type == C_ARITHMETIC) {
         arg1 = vm_arg1(command);
         translated = vm_write_arithmetic(arg1);
+    } else if (command_type == C_LABEL) {
+        translated = vm_write_label(cw->func, arg1);
+    } else if (command_type == C_GOTO) {
+        translated = vm_write_goto(cw->func, arg1);
     } else if (command_type == C_INVALID) {
         printf("[ERR] Invalid command %s\n", command);
         status = WC_INVALID_CMD;
@@ -368,36 +421,23 @@ char *vm_write_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, ch
  * Translates a VM label command into Hack assembly code.
  *
  * @param func  the VM function that the label is in
- * @param label the label to translate
+ * @param label the VM label to define
  * @return      the translated Hack code
  */
 char *vm_write_label(char *func, char *label) {
-    char *create_label = NULL;
-    char ch;
-    int all_valid = 1;
+    return gen_label_related_cmd(DEF_LABEL, func, label);
+}
 
-    // Make sure that the label only consists of allowed characters
-    for (int i = 0; i < (int)strlen(label); i++) {
-        ch = label[i];
-        int valid = 0;
-        for (int j = 0; j < (int)(sizeof(LABEL_CHAR_RANGES) / sizeof(LABEL_CHAR_RANGES[0])); j++) {
-            if (ch >= LABEL_CHAR_RANGES[j][0] && ch <= LABEL_CHAR_RANGES[j][1]) {
-                valid = 1;
-            }
-        }
 
-        if (!valid) {
-            all_valid = 0;
-        }
-    }
-
-    if (all_valid) {
-        create_label = fmt_str_printf(&LABEL, strlen(func) + strlen(label), func, label);
-    } else {
-        printf("[ERR] Invalid label name %s in function %s", label, func);
-    }
-
-    return create_label;
+/**
+ * Translates a VM goto command into Hack assembly code.
+ *
+ * @param func  the VM function that the label is in
+ * @param label the label to go to
+ * @return      the Hack code needed to go to the label
+ */
+char *vm_write_goto(char *func, char *label) {
+    return gen_label_related_cmd(GOTO_LABEL, func, label);
 }
 
 

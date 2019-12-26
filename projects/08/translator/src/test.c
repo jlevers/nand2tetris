@@ -220,9 +220,9 @@ static char *test_code_writer() {
     mu_assert("vm_write_command did not return WC_SUCCESS when given a valid C_ARITHMETIC command",
         vm_write_command("add", C_ARITHMETIC, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_LABEL",
-        vm_write_command("label test", C_LABEL, file_code_writer) == WC_UNSUPPORTED_CMD);
+        vm_write_command("label test", C_LABEL, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_GOTO",
-        vm_write_command("goto func", C_GOTO, file_code_writer) == WC_UNSUPPORTED_CMD);
+        vm_write_command("goto func", C_GOTO, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_IF",
         vm_write_command("if-goto end", C_IF, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_FUNCTION",
@@ -370,10 +370,24 @@ static char *test_code_writer() {
 
     mu_assert("vm_write_label does not successfully define a valid label",
         !strcmp(valid_label, "(test:abc_123.foo:bar)\n"));
-    mu_assert("vm_write_label translates a label with invalid characters", invalid_label == NULL);
+    mu_assert("vm_write_label does not return NULL when given a label with invalid characters", invalid_label == NULL);
 
     reinit_char(&valid_label);
     reinit_char(&invalid_label);
+
+
+    // Test vm_write_goto()
+    char *valid_goto = vm_write_goto("test", "abc_123.foo:bar");
+    char *invalid_goto = vm_write_goto("test", "@wrong*answer--");
+
+    mu_assert("vm_write_goto does not successfully go to a valid label",
+        !strcmp(valid_goto,
+            "@test:abc_123.foo:bar\n"
+            "0;JMP\n"));
+    mu_assert("vm_write_goto does not return NULL given an invalid label", invalid_goto == NULL);
+
+    reinit_char(&valid_goto);
+    reinit_char(&invalid_goto);
 
     return 0;
 }

@@ -215,5 +215,13 @@ const fmt_str POP_STATIC_SEG = {
 
 
 
-const fmt_str LABEL = {"(%s:%s)\n", 4};
+const fmt_str DEF_LABEL = {
+    "(%s:%s)\n",
+    4
+};
 
+const fmt_str GOTO_LABEL = {
+    "@%s:%s\n"
+    "0;JMP\n",
+    4
+};
