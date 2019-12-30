@@ -18,10 +18,7 @@ const fmt_str INIT = {
     "@256\n"
     "D=A\n"
     "@SP\n"
-    "M=D\n"
-    "(Sys.init)\n"
-    "@Main.main\n"
-    "0;JMP\n"
+    "M=D\n\n"
     "// Begin user-defined program\n",
     2
 };
@@ -224,4 +221,14 @@ const fmt_str GOTO_LABEL = {
     "@%s:%s\n"
     "0;JMP\n",
     4
+};
+
+const fmt_str IF_GOTO_LABEL = {
+    .str =
+        "@SP\n"
+        "AM=M-1\n"
+        "D=M\n"
+        "@%s:%s\n"
+        "D;JNE\n",
+    .fmt_len = 4
 };

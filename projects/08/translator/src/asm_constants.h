@@ -31,5 +31,6 @@ extern const fmt_str POP_STATIC_SEG;
 // Related to control flow operations
 extern const fmt_str DEF_LABEL;
 extern const fmt_str GOTO_LABEL;
+extern const fmt_str IF_GOTO_LABEL;
 
 #endif /* _VM_ASM_CONSTANTS_H */

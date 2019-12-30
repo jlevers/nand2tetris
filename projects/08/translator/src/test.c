@@ -224,7 +224,7 @@ static char *test_code_writer() {
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_GOTO",
         vm_write_command("goto func", C_GOTO, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_IF",
-        vm_write_command("if-goto end", C_IF, file_code_writer) == WC_UNSUPPORTED_CMD);
+        vm_write_command("if-goto end", C_IF, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_FUNCTION",
         vm_write_command("function mult 2", C_FUNCTION, file_code_writer) == WC_UNSUPPORTED_CMD);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_RETURN",
@@ -246,10 +246,7 @@ static char *test_code_writer() {
             "@256\n"
             "D=A\n"
             "@SP\n"
-            "M=D\n"
-            "(Sys.init)\n"
-            "@Main.main\n"
-            "0;JMP\n"
+            "M=D\n\n"
             "// Begin user-defined program\n"));
 
     free(init);
@@ -377,17 +374,34 @@ static char *test_code_writer() {
 
 
     // Test vm_write_goto()
-    char *valid_goto = vm_write_goto("test", "abc_123.foo:bar");
+    char *valid_goto = vm_write_goto("test", "abc_123.foo:BaR");
     char *invalid_goto = vm_write_goto("test", "@wrong*answer--");
 
     mu_assert("vm_write_goto does not successfully go to a valid label",
         !strcmp(valid_goto,
-            "@test:abc_123.foo:bar\n"
+            "@test:abc_123.foo:BaR\n"
             "0;JMP\n"));
     mu_assert("vm_write_goto does not return NULL given an invalid label", invalid_goto == NULL);
 
     reinit_char(&valid_goto);
     reinit_char(&invalid_goto);
+
+
+    // Test vm_write_if()
+    char *valid_if = vm_write_if("foo", "abc_123.FOO:bar");
+    char *invalid_if = vm_write_if("foo", "this&is%wrong");
+
+    mu_assert("vm_write_if does not correctly conditionally jump to a valid label",
+        !strcmp(valid_if,
+            "@SP\n"
+            "AM=M-1\n"
+            "D=M\n"
+            "@foo:abc_123.FOO:bar\n"
+            "D;JNE\n"));
+    mu_assert("vm_write_if does not return NULL when given an invalid label", invalid_if == NULL);
+
+    reinit_char(&valid_if);
+    reinit_char(&invalid_if);
 
     return 0;
 }

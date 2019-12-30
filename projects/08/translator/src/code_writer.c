@@ -325,12 +325,13 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
             status = WC_INVALID_CMD;
         }
     } else if (command_type == C_ARITHMETIC) {
-        arg1 = vm_arg1(command);
         translated = vm_write_arithmetic(arg1);
     } else if (command_type == C_LABEL) {
         translated = vm_write_label(cw->func, arg1);
     } else if (command_type == C_GOTO) {
         translated = vm_write_goto(cw->func, arg1);
+    } else if (command_type == C_IF) {
+        translated = vm_write_if(cw->func, arg1);
     } else if (command_type == C_INVALID) {
         printf("[ERR] Invalid command %s\n", command);
         status = WC_INVALID_CMD;
@@ -438,6 +439,18 @@ char *vm_write_label(char *func, char *label) {
  */
 char *vm_write_goto(char *func, char *label) {
     return gen_label_related_cmd(GOTO_LABEL, func, label);
+}
+
+
+/**
+ * Translates a VM if-goto command into Hack assembly code.
+ *
+ * @param func  the VM function that the label is in
+ * @param label the label to conditionally jump to
+ * @return      the Hack code needed to conditiionally jump to the label
+ */
+char *vm_write_if(char *func, char *label) {
+    return gen_label_related_cmd(IF_GOTO_LABEL, func, label);
 }
 
 
