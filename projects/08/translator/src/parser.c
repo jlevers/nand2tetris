@@ -180,13 +180,13 @@ char *vm_arg1(char *line) {
     }
 
     int i = 0;
-    while(line[i] != ' ') {
+    while (line[i] != ' ') {
         i++;
     }
     i++;
 
     int j = i;
-    while(j < (int)strlen(line) && line[j] != ' ') {
+    while (j < (int)strlen(line) && line[j] != ' ') {
         j++;
     }
 

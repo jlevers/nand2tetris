@@ -184,7 +184,7 @@ static int valid_label(char *label) {
  * Returns a filled-in version of a fmt_str, given a list of variables to substitute in, and their total string length.
  * Essentially a wrapper around vsnprintf().
  *
- * @param fs the fmt_str struct to fill in
+ * @param fs      the fmt_str struct to fill in
  * @param sub_len the total length of all variables being substituted into @fs
  * @param ...     a list of variables to substitute into @fs
  * @return        the completed version of @fs, with all format specifiers replaced with the substitute variables
@@ -203,8 +203,8 @@ static char *fmt_str_printf(const fmt_str *fs, int sub_len, ...) {
 /**
  * Generates the Hack assembly code for a VM label or goto command.
  *
- * @param fs the format string to be used to generate the Hack commands
- * @param func the name of the function that the label is defined in
+ * @param fs    the format string to be used to generate the Hack commands
+ * @param func  the name of the function that the label is defined in
  * @param label the name of the label to define or go to
  * @return      the Hack code to define or go to a VM label
  */
@@ -449,7 +449,7 @@ char *vm_write_goto(char *func, char *label) {
 void vm_code_writer_close(code_writer *cw) {
     FILE *out = cw->out;
 
-    fprintf(out, "// End user-defined program\n\n");
+    fprintf(out, "\n// End user-defined program\n\n");
     fprintf(out, "// This terminates the program by sending it into an infinite loop\n");
     fprintf(out, "%s\n", INF_LOOP);
     /*
