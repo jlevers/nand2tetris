@@ -10,7 +10,7 @@ extern const char *TF_FUNC;
 
 // Related to arithmetic operations
 extern const fmt_str GOTO_ARITH_OP;
-extern const char *ARITH_OP_END;
+extern const char *JUMP_OP_END;
 extern const fmt_str ARITH_ADDSUB_BASE_CMD;
 extern const fmt_str ARITH_CMP_BASE_CMD;
 extern const fmt_str ARITH_BOOL_BASE_CMD;
@@ -32,5 +32,11 @@ extern const fmt_str POP_STATIC_SEG;
 extern const fmt_str DEF_LABEL;
 extern const fmt_str GOTO_LABEL;
 extern const fmt_str IF_GOTO_LABEL;
+
+// Related to functions
+extern const fmt_str DEF_FUNC_INIT;
+extern const char *INIT_FUNC_LCL;
+extern const char *FUNC_GOTO_RETURN;
+extern const char *FUNC_RETURN;
 
 #endif /* _VM_ASM_CONSTANTS_H */

@@ -35,6 +35,7 @@ const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
 /* STATIC VARIABLES */
 
 static int num_arith_calls = 0;
+static int num_func_definitions = 0;
 
 /* END STATIC VARIABLES */
 
@@ -153,22 +154,28 @@ static char *gen_arith_cmd(const char *base_cmd, char *op, ht_hash_table *op_map
 
 
 /**
- * Checks that a VM label contains only allowed characters.
+ * Checks that a VM function or label contains only allowed characters.
  *
- * @param label the label to check
- * @return      1 if the label is valid, 0 otherwise
+ * @param ident    the function/label to check
+ * @param is_label 1 if @ident is a label name, 0 otherwise
+ * @return         1 if @ident is valid, 0 otherwise
  */
-static int valid_label(char *label) {
+static int valid_identifier(char *ident, int is_label) {
     char ch;
     int all_valid = 1;
 
-    for (int i = 0; i < (int)strlen(label); i++) {
-        ch = label[i];
+    for (int i = 0; i < (int)strlen(ident); i++) {
+        ch = ident[i];
         int valid = 0;
         for (int j = 0; j < (int)(sizeof(LABEL_CHAR_RANGES) / sizeof(LABEL_CHAR_RANGES[0])); j++) {
             if (ch >= LABEL_CHAR_RANGES[j][0] && ch <= LABEL_CHAR_RANGES[j][1]) {
                 valid = 1;
             }
+        }
+
+        // Don't allow the FUNCTION_SEPARATOR character in label names
+        if (is_label && ch == FUNCTION_SEPARATOR) {
+            valid = 0;
         }
 
         if (!valid) {
@@ -192,30 +199,35 @@ static int valid_label(char *label) {
 static char *fmt_str_printf(const fmt_str *fs, int sub_len, ...) {
     int final_str_len = fmt_str_len(fs) + sub_len;
     char *final_str = calloc(final_str_len + 1, sizeof(char));
-    va_list args, args_cpy;
+    va_list args;
     va_start(args, sub_len);
-    va_copy(args_cpy, args);
-    vsnprintf(final_str, final_str_len + 1, fs->str, args_cpy);
+    vsnprintf(final_str, final_str_len + 1, fs->str, args);
     return final_str;
 }
 
 
 /**
- * Generates the Hack assembly code for a VM label or goto command.
+ * Generates the Hack assembly code for label-related VM commands
  *
  * @param fs    the format string to be used to generate the Hack commands
- * @param func  the name of the function that the label is defined in
- * @param label the name of the label to define or go to
+ * @param func  the function containing the label
+ * @param label the label name itself
  * @return      the Hack code to define or go to a VM label
  */
-static char *gen_label_related_cmd(fmt_str fs, char *func, char *label) {
+static char *gen_label_cmd(fmt_str fs, char *func, char *label) {
     char *cmd = NULL;
 
-    if (valid_label(label)) {
-        cmd = fmt_str_printf(&fs, strlen(func) + strlen(label), func, label);
+    char *internal_func = func != NULL ? strdup(func) : strdup(DEFAULT_FUNC_NAME);
+
+    int valid = valid_identifier(internal_func, 0) && valid_identifier(label, 1);
+
+    if (valid) {
+        cmd = fmt_str_printf(&fs, strlen(internal_func) + strlen(label) + 1, internal_func, LABEL_SEPARATOR, label);
     } else {
-        printf("[ERR] Invalid label name %s defined or referenced in function %s\n", label, func);
+        printf("[ERR] Invalid label %s defined or referenced in %s\n", label, internal_func);
     }
+
+    reinit_str(&internal_func);
 
     return cmd;
 }
@@ -268,7 +280,7 @@ code_writer *VM_Code_Writer(char *input_path) {
     if (!out) {
         perror("[ERR] Failed to open VM output file");
     } else {
-        cw = cw_new(out, NULL);
+        cw = cw_new(out, NULL, NULL);
     }
 
     char *bootstrap = vm_write_initial(output_path);
@@ -332,6 +344,12 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
         translated = vm_write_goto(cw->func, arg1);
     } else if (command_type == C_IF) {
         translated = vm_write_if(cw->func, arg1);
+    } else if (command_type == C_FUNCTION) {
+        cw_set_func(cw, arg1);
+        translated = vm_write_function(cw, arg2);
+    } else if (command_type == C_RETURN) {
+        cw_set_func(cw, NULL);
+        translated = vm_write_return();
     } else if (command_type == C_INVALID) {
         printf("[ERR] Invalid command %s\n", command);
         status = WC_INVALID_CMD;
@@ -426,7 +444,7 @@ char *vm_write_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, ch
  * @return      the translated Hack code
  */
 char *vm_write_label(char *func, char *label) {
-    return gen_label_related_cmd(DEF_LABEL, func, label);
+    return gen_label_cmd(DEF_LABEL, func, label);
 }
 
 
@@ -438,7 +456,7 @@ char *vm_write_label(char *func, char *label) {
  * @return      the Hack code needed to go to the label
  */
 char *vm_write_goto(char *func, char *label) {
-    return gen_label_related_cmd(GOTO_LABEL, func, label);
+    return gen_label_cmd(GOTO_LABEL, func, label);
 }
 
 
@@ -450,7 +468,45 @@ char *vm_write_goto(char *func, char *label) {
  * @return      the Hack code needed to conditiionally jump to the label
  */
 char *vm_write_if(char *func, char *label) {
-    return gen_label_related_cmd(IF_GOTO_LABEL, func, label);
+    return gen_label_cmd(IF_GOTO_LABEL, func, label);
+}
+
+
+/**
+ * Translates a VM function declaration command into Hack assembly code.
+ *
+ * @param cw       the code_writer struct being used to translate the current .vm file
+ * @param num_args the number of arguments the function takes
+ * @return         the Hack code needed to define the function in a Hack program
+ */
+char *vm_write_function(code_writer *cw, int num_args) {
+    char *final = NULL;
+
+    if (!valid_identifier(cw->func, 0)) {
+        printf("[ERR] vm_write_function was given a code_writer with a func field containing invalid characters\n");
+    } else if (cw->func != NULL) {
+        final = fmt_str_printf(
+            &DEF_FUNC_INIT,
+            strlen(cw->func) + num_digits(num_args) + 2 * num_digits(num_func_definitions),
+            cw->func, num_func_definitions, num_args, num_func_definitions
+        );
+        num_func_definitions++;
+    } else {
+        printf("[ERR] Tried to write function using code_writer with NULL func field\n");
+    }
+
+    return final;
+}
+
+
+/**
+ * Translates a VM return command into Hack assembly code.
+ *
+ * @return the Hack code needed to return from a function
+ */
+char *vm_write_return() {
+    return (char*)strdup(FUNC_GOTO_RETURN);
+}
 }
 
 
@@ -470,7 +526,13 @@ void vm_code_writer_close(code_writer *cw) {
      * may end up being run in the middle of the user's program.
      */
 
-    // A map of VM operations (add, sub, etc) and the assembly commands associated with them
+    // Hack routine to initialize a function's local variables
+    fprintf(out, "%s\n", INIT_FUNC_LCL);
+
+    // Hack routine to return from a function (including resetting the global stack to the previous state of the caller function)
+    fprintf(out, "%s\n", FUNC_RETURN);
+
+    // A map of VM arithmetic operations (add, sub, etc) and the assembly commands associated with them
     ht_hash_table *vm_op_to_asm = ht_new(NUM_ARITH_OPS);
     ht_insert_all(vm_op_to_asm, NUM_ARITH_OPS, ARITHMETIC_OPS, HACK_ARITH_OPS);
     
@@ -506,8 +568,8 @@ void vm_code_writer_close(code_writer *cw) {
 
     ht_delete(vm_op_to_asm);
 
-    // Assists jump back to primary program flow after arithmetic operations
-    fprintf(out, "%s\n", ARITH_OP_END);
+    // Assists jump back to primary program flow after built-in operations
+    fprintf(out, "%s\n", JUMP_OP_END);
 
     // Enables true/false operations
     fprintf(out, "%s\n", TF_FUNC);
@@ -517,21 +579,24 @@ void vm_code_writer_close(code_writer *cw) {
 
 
 /**
- * Initializes and returns a code_writer struct. The func field is set to DEFAULT_FUNC_NAME from vm_constants.h.
+ * Initializes and returns a code_writer struct. The func field is set to @func.
  *
  * @param outfile     the file to write translated Hack code to
  * @param infile_name the name of the .vm file being read
+ * @param func        the initial function name, if any
  * @return            a new code_writer
  */
-code_writer *cw_new(FILE *outfile, char *infile_name) {
+code_writer *cw_new(FILE *outfile, char *infile_name, char *func) {
     code_writer *cw = calloc(1, sizeof(code_writer));
     cw->out = outfile;
+
     if (infile_name != NULL) {
         cw->in_name = strdup(infile_name);
     } else {
         cw->in_name = NULL;
     }
-    cw->func = strdup(DEFAULT_FUNC_NAME);
+
+    cw_set_func(cw, func);
 
     return cw;
 }
@@ -557,7 +622,8 @@ void cw_set_in_name(code_writer *cw, char *in_name){
 
 
 /**
- * Sets the func field of a code_writer struct.
+ * Sets the func field of a code_writer struct. If the in_name field of @cw is not NULL, the new func field
+ * will be set to <@cw.in_name>.<@func>.
  *
  * @param cw   the code_writer on which to set the func field
  * @param func the new func name

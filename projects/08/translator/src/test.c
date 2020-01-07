@@ -148,15 +148,16 @@ static char *test_parser() {
 static char *test_code_writer() {
     // Test cw_new()
     FILE *test_out = fopen("./src/test/TestOut.asm", "a");  // This doesn't need to be closed since it's closed by cw_delete
-    code_writer *cw1 = cw_new(test_out, "Asdf");
-    code_writer *cw2 = cw_new(NULL, NULL);
+    code_writer *cw1 = cw_new(test_out, "Asdf", "main");
+    code_writer *cw2 = cw_new(NULL, NULL, NULL);
 
     mu_assert("cw_new did not correctly set the output file when given an open file handle",
         same_file(fileno(cw1->out), open("./src/test/TestOut.asm", 'r')));
     mu_assert("cw_new did not set the output file to NULL when given a NULL file handle", cw2->out == NULL);
     mu_assert("cw_new did not correctly set the code_writer's in_file", !strcmp(cw1->in_name, "Asdf"));
     mu_assert("cw_new did not set the code_writer's in_file to NULL when given a NULL in_file arg", cw2->in_name == NULL);
-    mu_assert("cw_new did not set the code_writer's function to the default correctly", !strcmp(cw1->func, "default"));
+    mu_assert("cw_new did not set the code_writer's initial func correctly when given a non-NULL func name", !strcmp(cw1->func, "main"));
+    mu_assert("cw_new did not set the code_writer's initial func correctly when given a NULL func name", cw2->func == NULL);
 
 
     // Test cw_set_in_name()
@@ -165,8 +166,8 @@ static char *test_code_writer() {
 
     mu_assert("cw_set_in_name did not correctly set an already-defined in_file field", !strcmp(cw1->in_name, "qwer"));
     mu_assert("cw_set_in_name did not correctly set an initially NULL in_file field", !strcmp(cw2->in_name, "something"));
-    cw_set_in_name(cw1, NULL);
-    mu_assert("cw_set_in_name did not correctly set an in_file field to NULL", cw1->in_name == NULL);
+    cw_set_in_name(cw2, NULL);
+    mu_assert("cw_set_in_name did not correctly set an in_file field to NULL", cw2->in_name == NULL);
 
 
     // Test cw_set_func
@@ -226,9 +227,9 @@ static char *test_code_writer() {
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_IF",
         vm_write_command("if-goto end", C_IF, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_FUNCTION",
-        vm_write_command("function mult 2", C_FUNCTION, file_code_writer) == WC_UNSUPPORTED_CMD);
+        vm_write_command("function mult 2", C_FUNCTION, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_RETURN",
-        vm_write_command("return", C_RETURN, file_code_writer) == WC_UNSUPPORTED_CMD);
+        vm_write_command("return", C_RETURN, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_CALL",
         vm_write_command("call mult 2", C_CALL, file_code_writer) == WC_UNSUPPORTED_CMD);
 
@@ -247,6 +248,8 @@ static char *test_code_writer() {
             "D=A\n"
             "@SP\n"
             "M=D\n\n"
+            "@Sys.init\n"
+            "0;JMP\n\n"
             "// Begin user-defined program\n"));
 
     free(init);
@@ -362,11 +365,11 @@ static char *test_code_writer() {
 
 
     // Test vm_write_label()
-    char *valid_label = vm_write_label("test", "abc_123.foo:bar");
-    char *invalid_label = vm_write_label("test", "going-wild?");
+    char *valid_label = vm_write_label("Test.test", "abc_123_FOO");
+    char *invalid_label = vm_write_label("Test.test", "going:wild?");
 
     mu_assert("vm_write_label does not successfully define a valid label",
-        !strcmp(valid_label, "(test:abc_123.foo:bar)\n"));
+        !strcmp(valid_label, "(Test.test:abc_123_FOO)\n"));
     mu_assert("vm_write_label does not return NULL when given a label with invalid characters", invalid_label == NULL);
 
     reinit_str(&valid_label);
@@ -374,12 +377,12 @@ static char *test_code_writer() {
 
 
     // Test vm_write_goto()
-    char *valid_goto = vm_write_goto("test", "abc_123.foo:BaR");
-    char *invalid_goto = vm_write_goto("test", "@wrong*answer--");
+    char *valid_goto = vm_write_goto(NULL, "abc_123_FOO");
+    char *invalid_goto = vm_write_goto("test", "wrong:answer-");
 
     mu_assert("vm_write_goto does not successfully go to a valid label",
         !strcmp(valid_goto,
-            "@test:abc_123.foo:BaR\n"
+            "@Main.main:abc_123_FOO\n"
             "0;JMP\n"));
     mu_assert("vm_write_goto does not return NULL given an invalid label", invalid_goto == NULL);
 
@@ -388,20 +391,58 @@ static char *test_code_writer() {
 
 
     // Test vm_write_if()
-    char *valid_if = vm_write_if("foo", "abc_123.FOO:bar");
-    char *invalid_if = vm_write_if("foo", "this&is%wrong");
+    char *valid_if = vm_write_if("Foo.bar", "abc_123_FOO");
+    char *invalid_if = vm_write_if("Foo.bar", "this&is%wrong");
 
     mu_assert("vm_write_if does not correctly conditionally jump to a valid label",
         !strcmp(valid_if,
             "@SP\n"
             "AM=M-1\n"
             "D=M\n"
-            "@foo:abc_123.FOO:bar\n"
+            "@Foo.bar:abc_123_FOO\n"
             "D;JNE\n"));
     mu_assert("vm_write_if does not return NULL when given an invalid label", invalid_if == NULL);
 
     reinit_str(&valid_if);
     reinit_str(&invalid_if);
+
+
+    // Test vm_write_function()
+    code_writer *test_write_func = cw_new(fopen("./src/test/Test.asm", "a"), "Test", "asdf");
+    char *valid_func = vm_write_function(test_write_func, 2);
+    cw_set_func(test_write_func, "a-b");
+    char *invalid_func = vm_write_function(test_write_func, 3);
+
+    mu_assert("vm_write_function does not correctly translate a valid function declaration",
+        !strcmp(valid_func,
+        "(asdf)\n"  // The filled-in version of DEF_FUNC_LABEL
+        "@FUNC_DEF_1\n"
+        "D=A\n"
+        "@R13\n"
+        "M=D\n"
+        "@2\n"
+        "D=A\n"
+        "@R14\n"
+        "M=D\n"
+        "@__INIT_LCL\n"
+        "0;JMP\n"
+        "(FUNC_DEF_1)\n"));
+    mu_assert("vm_write_function translates an invalid function declaration", invalid_func == NULL);
+
+    reinit_str(&valid_func);
+    reinit_str(&invalid_func);
+    cw_delete(&test_write_func);
+
+
+    // Test vm_write_return()
+    char *ret = vm_write_return();
+
+    mu_assert("vm_write_return does not correctly translate a return command",
+        !strcmp(ret,
+            "@__FUNC_RETURN\n"
+            "0;JMP\n"));
+
+    reinit_str(&ret);
 
     return 0;
 }

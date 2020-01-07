@@ -1,14 +1,32 @@
 #include <stdlib.h>
 
+#include "asm_constants.h"
 #include "util.h"
 
 /*
  * NOTES
  * -----
- * For arithmetic operations, the address to jump to after completing the operation is stored in @R13.
- * For true/false operations, the address to jump to after completing the operation is stored in @R14.
- * Intermediate pointers in pop operations are stored in @R15.
- * All internal labels begin with a double underscore: __LABEL_NAME
+ * @R13:
+ *  - Stores the address to jump to after completing a built-in operation.
+ *
+ * @R14:
+ *  - Stores the address to jump to after completing a true/false operation.
+ *  - Stores the number of local variables that need to be initialized when creating function definitions.
+ *
+ * @R15:
+ *  - Stores intermediate pointers in pop operations.
+ *
+ * TEMP[0]:
+ *  - Stores the number of local variables to initialize when calling a function
+ *  - Stores a pointer to the frame of a returning function
+ *  - Stores the return address for a called function, which is set by the caller function
+ * TEMP[1]:
+ *  - Stores the addresses of local variables while they're being initialized to 0
+ *  - When returning from a function, stores the return address to return to
+ *  - Stores the number of arguments pushed onto the stack for function that's being called
+ *
+ * All internal procedure labels begin with a double underscore: __LABEL_NAME
+ * All internal variable labels begin and end with a double underscore: __var__
  */
 
 const fmt_str INIT = {
@@ -20,6 +38,8 @@ const fmt_str INIT = {
         "D=A\n"
         "@SP\n"
         "M=D\n\n"
+        "@Sys.init\n"
+        "0;JMP\n\n"
         "// Begin user-defined program\n",
     .fmt_len = 2
 };
@@ -57,8 +77,8 @@ const fmt_str GOTO_ARITH_OP = {
     .fmt_len = 6
 };
 
-const char *ARITH_OP_END =
-    "(__END_ARITH_OP)\n"
+const char *JUMP_OP_END =
+    "(__END_OP)\n"
     "@R13\n"
     "A=M\n"
     "0;JMP\n";
@@ -78,7 +98,7 @@ const fmt_str ARITH_ADDSUB_BASE_CMD = {
         "A=M-1\n"
         "D=M%sD\n"
         "M=D\n"
-        "@__END_ARITH_OP\n"
+        "@__END_OP\n"
         "0;JMP\n",
     .fmt_len = 2
 };
@@ -92,7 +112,7 @@ const fmt_str ARITH_CMP_BASE_CMD = {
         "M=M-1\n"
         "A=M-1\n"
         "M=M-D\n"
-        "@__END_ARITH_OP\n"
+        "@__END_OP\n"
         "D=A\n"
         "@R14\n"
         "M=D\n"
@@ -115,7 +135,7 @@ const fmt_str ARITH_BOOL_BASE_CMD = {
         "M=M-1\n"
         "A=M-1\n"
         "M=M%sD\n"
-        "@__END_ARITH_OP\n"
+        "@__END_OP\n"
         "0;JMP\n",
     .fmt_len = 2
 };
@@ -125,7 +145,7 @@ const fmt_str ARITH_UNARY_BASE_CMD = {
         "@SP\n"
         "A=M-1\n"
         "M=%sM\n"
-        "@__END_ARITH_OP\n"
+        "@__END_OP\n"
         "0;JMP\n",
     .fmt_len = 2
 };
@@ -224,15 +244,15 @@ const fmt_str POP_STATIC_SEG = {
 
 
 const fmt_str DEF_LABEL = {
-    .str = "(%s:%s)\n",
-    .fmt_len = 4
+    .str = "(%s%c%s)\n",
+    .fmt_len = 6
 };
 
 const fmt_str GOTO_LABEL = {
     .str =
-        "@%s:%s\n"
+        "@%s%c%s\n"
         "0;JMP\n",
-    .fmt_len = 4
+    .fmt_len = 6
 };
 
 const fmt_str IF_GOTO_LABEL = {
@@ -240,7 +260,123 @@ const fmt_str IF_GOTO_LABEL = {
         "@SP\n"
         "AM=M-1\n"
         "D=M\n"
-        "@%s:%s\n"
+        "@%s%c%s\n"
         "D;JNE\n",
-    .fmt_len = 4
+    .fmt_len = 6
 };
+
+const fmt_str DEF_FUNC_INIT = {
+    .str =
+        "(%s)\n"  // The filled-in version of DEF_FUNC_LABEL
+        // Store the address to jump back to after initializing the function in R13
+        "@FUNC_DEF_%d\n"
+        "D=A\n"
+        "@R13\n"
+        "M=D\n"
+        // Store the number of local variables to initialize in TEMP[0]
+        "@%d\n"
+        "D=A\n"
+        "@TEMP\n"
+        "M=D\n"
+        // Jump to the local variables initialization procedure
+        "@__INIT_LCL\n"
+        "0;JMP\n"
+        // A label for the main body of the function
+        "(FUNC_DEF_%d)\n",
+    .fmt_len = 8
+};
+
+const char *INIT_FUNC_LCL =
+    "(__INIT_LCL)\n"
+    // Get the number of local variables to initialize from TEMP[0]
+    "@TEMP\n"
+    "D=M\n"
+    // If there are no local variables in the function, jump back to the function definition
+    "@__END_OP\n"
+    "D;JEQ\n"
+    "(__INIT_LCL_LOOP)\n"
+    // Make the address of the Nth local variable equal to (@LCL + N - 1) since addressing is zero-indexed
+    "@LCL\n"
+    "D=M+D\n"
+    "D=D-1\n"
+    // Store this local variable's address in TEMP[1]
+    "@TEMP\n"
+    "A=A+1\n"
+    "M=D\n"
+    // Set the local variable to 0
+    "@0\n"
+    "D=A\n"
+    "@TEMP\n"
+    "A=A+1\n"
+    "A=M\n"
+    "M=D\n"
+    // Decrement how many local variables need to be initialized
+    "@TEMP\n"
+    "MD=M-1\n"
+    // Keep looping if there are still variables to initialize
+    "@__INIT_LCL_LOOP\n"
+    "D;JGT\n"
+    // Jump back to the function definition
+    "@__END_OP\n"
+    "0;JMP\n";
+
+const char *FUNC_GOTO_RETURN =
+    "@__FUNC_RETURN\n"
+    "0;JMP\n";
+
+const char *FUNC_RETURN =
+    "(__FUNC_RETURN)\n"
+    // Store the returning function's frame in TEMP[0]
+    "@LCL\n"
+    "D=M\n"
+    "@TEMP\n"
+    "M=D\n"
+    // Store the return address of the caller function in TEMP[1]
+    "@5\n"
+    "A=D-A\n"
+    "D=M\n"
+    "@TEMP\n"
+    "A=A+1\n"
+    "M=D\n"
+    // Make ARG[0] equal to the return value, which is the top item on the stack
+    "@SP\n"
+    "A=M-1\n"
+    "D=M\n"
+    "@ARG\n"
+    "A=M\n"
+    "M=D\n"
+    // Set SP to one address ahead of the return value
+    "@ARG\n"
+    "D=M\n"
+    "@SP\n"
+    "M=D+1\n"
+    // Reset THAT to be the caller function's THAT address
+    "@TEMP\n"
+    "AM=M-1\n"
+    "D=M\n"
+    "@THAT\n"
+    "M=D\n"
+    // Reset THIS to be the caller function's THIS address
+    "@TEMP\n"
+    "AM=M-1\n"
+    "D=M\n"
+    "@THIS\n"
+    "M=D\n"
+    // Reset ARG to be the caller function's ARG address
+    "@TEMP\n"
+    "AM=M-1\n"
+    "D=M\n"
+    "@ARG\n"
+    "M=D\n"
+    // Rest LCL to be the caller function's LCL address
+    "@TEMP\n"
+    "AM=M-1\n"
+    "D=M\n"
+    "@LCL\n"
+    "M=D\n"
+    // Retrieve the return address of the caller function and jump to it
+    "@TEMP\n"
+    "A=A+1\n"
+    "A=M\n"
+    "0;JMP\n";
+
