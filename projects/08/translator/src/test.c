@@ -422,7 +422,7 @@ static char *test_code_writer() {
         "M=D\n"
         "@2\n"
         "D=A\n"
-        "@R14\n"
+        "@TEMP\n"
         "M=D\n"
         "@__INIT_LCL\n"
         "0;JMP\n"
