@@ -79,10 +79,10 @@ int path_parts_cmp(path_parts *a, path_parts *b) {
 void path_parts_delete(path_parts **p) {
     if (*p != NULL) {
         if ((*p)->basename != NULL) {
-            reinit_char(&((*p)->basename));
+            reinit_str(&((*p)->basename));
         }
         if ((*p)->dirname != NULL) {
-            reinit_char(&((*p)->dirname));
+            reinit_str(&((*p)->dirname));
         }
         free(*p);
         *p = NULL;
@@ -229,7 +229,7 @@ void fmt_str_delete(fmt_str **fs) {
  *
  * @param to_process  A double pointer to a string
  */
-void reinit_char(char **to_process) {
+void reinit_str(char **to_process) {
     if (*to_process != NULL) {
         free(*to_process);
         *to_process = NULL;

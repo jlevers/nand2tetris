@@ -31,17 +31,17 @@ static char *test_parser() {
     char *line = vm_advance(parser_in);
     mu_assert("vm_advance did not skip full-line comment and/or empty line",
         !strcmp(line, "push constant 7"));
-    reinit_char(&line);
+    reinit_str(&line);
     line = vm_advance(parser_in);
     mu_assert("vm_advance did not properly ignore inline comment and/or consecutive spaces",
         !strcmp(line, "push constant 8"));
-    reinit_char(&line);
+    reinit_str(&line);
 
     line = vm_advance(parser_in);
-    reinit_char(&line);
+    reinit_str(&line);
     line = vm_advance(parser_in);
     mu_assert("vm_advance did not return NULL at EOF", line == NULL);
-    reinit_char(&line);
+    reinit_str(&line);
 
     fclose(parser_in);
 
@@ -108,15 +108,15 @@ static char *test_parser() {
         !strcmp(arg1_label, "test"));
     mu_assert("vm_arg1 did not return `mult` when given the command `function mult 2`",
         !strcmp(arg1_func, "mult"));
-    reinit_char(&arg1_invalid);
-    reinit_char(&arg1_ret);
-    reinit_char(&arg1_arith1);
-    reinit_char(&arg1_arith2);
-    reinit_char(&arg1_goto);
-    reinit_char(&arg1_ifgoto);
-    reinit_char(&arg1_push);
-    reinit_char(&arg1_label);
-    reinit_char(&arg1_func);
+    reinit_str(&arg1_invalid);
+    reinit_str(&arg1_ret);
+    reinit_str(&arg1_arith1);
+    reinit_str(&arg1_arith2);
+    reinit_str(&arg1_goto);
+    reinit_str(&arg1_ifgoto);
+    reinit_str(&arg1_push);
+    reinit_str(&arg1_label);
+    reinit_str(&arg1_func);
 
 
     // Test vm_arg2()
@@ -274,8 +274,8 @@ static char *test_code_writer() {
             "0;JMP\n"
             "(POST_ARITH_CALL_2)\n"));
 
-    reinit_char(&translate_add);
-    reinit_char(&translate_eq);
+    reinit_str(&translate_add);
+    reinit_str(&translate_eq);
 
 
     // Test vm_write_push_pop()
@@ -352,13 +352,13 @@ static char *test_code_writer() {
             "@Test.4\n"
             "M=D\n"));
 
-    reinit_char(&translate_push_const);
-    reinit_char(&translate_push_arg);
-    reinit_char(&translate_pop_local);
-    reinit_char(&translate_push_temp);
-    reinit_char(&translate_pop_pointer);
-    reinit_char(&translate_push_static);
-    reinit_char(&translate_pop_static);
+    reinit_str(&translate_push_const);
+    reinit_str(&translate_push_arg);
+    reinit_str(&translate_pop_local);
+    reinit_str(&translate_push_temp);
+    reinit_str(&translate_pop_pointer);
+    reinit_str(&translate_push_static);
+    reinit_str(&translate_pop_static);
 
 
     // Test vm_write_label()
@@ -369,8 +369,8 @@ static char *test_code_writer() {
         !strcmp(valid_label, "(test:abc_123.foo:bar)\n"));
     mu_assert("vm_write_label does not return NULL when given a label with invalid characters", invalid_label == NULL);
 
-    reinit_char(&valid_label);
-    reinit_char(&invalid_label);
+    reinit_str(&valid_label);
+    reinit_str(&invalid_label);
 
 
     // Test vm_write_goto()
@@ -383,8 +383,8 @@ static char *test_code_writer() {
             "0;JMP\n"));
     mu_assert("vm_write_goto does not return NULL given an invalid label", invalid_goto == NULL);
 
-    reinit_char(&valid_goto);
-    reinit_char(&invalid_goto);
+    reinit_str(&valid_goto);
+    reinit_str(&invalid_goto);
 
 
     // Test vm_write_if()
@@ -400,8 +400,8 @@ static char *test_code_writer() {
             "D;JNE\n"));
     mu_assert("vm_write_if does not return NULL when given an invalid label", invalid_if == NULL);
 
-    reinit_char(&valid_if);
-    reinit_char(&invalid_if);
+    reinit_str(&valid_if);
+    reinit_str(&invalid_if);
 
     return 0;
 }
@@ -487,9 +487,9 @@ static char *test_util() {
     mu_assert("remove_fext incorrectly processes filenames with long file extensions",
         !strcmp(remove_fext_long_fext, "foo"));
 
-    reinit_char(&remove_fext_no_fext);
-    reinit_char(&remove_fext_single_char_fext);
-    reinit_char(&remove_fext_long_fext);
+    reinit_str(&remove_fext_no_fext);
+    reinit_str(&remove_fext_single_char_fext);
+    reinit_str(&remove_fext_long_fext);
 
 
     // Test toupper_str()
@@ -503,8 +503,8 @@ static char *test_util() {
     mu_assert("toupper_str doesn't properly convert \"abcd\" to uppercase", !strcmp(lower_upper, "ABCD"));
     mu_assert("toupper_str doesn't properly convert \"4Daf!!\" to uppercase", !strcmp(mixed_upper, "4DAF!!"));
 
-    reinit_char(&lower_upper);
-    reinit_char(&mixed_upper);
+    reinit_str(&lower_upper);
+    reinit_str(&mixed_upper);
 
 
     // Test vm_strcmp()
@@ -546,14 +546,14 @@ static char *test_util() {
     mu_assert("fmt_str_delete did not leave a NULL fmt_str as NULL", fs3 == NULL);
 
 
-    // Test reinit_char()
+    // Test reinit_str()
     char *to_reinit1 = calloc(4, sizeof(char));
     char *to_reinit2 = NULL;
-    reinit_char(&to_reinit1);
-    reinit_char(&to_reinit2);
+    reinit_str(&to_reinit1);
+    reinit_str(&to_reinit2);
 
-    mu_assert("reinit_char does not successfully set a pointer to a non-NULL char* to NULL", to_reinit1 == NULL);
-    mu_assert("reinit_char doesn't leave a pointer to a NULL char* as NULL", to_reinit2 == NULL);
+    mu_assert("reinit_str does not successfully set a pointer to a non-NULL char* to NULL", to_reinit1 == NULL);
+    mu_assert("reinit_str doesn't leave a pointer to a NULL char* as NULL", to_reinit2 == NULL);
 
 
     // Test num_digits()

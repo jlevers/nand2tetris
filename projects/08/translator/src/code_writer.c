@@ -347,8 +347,8 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
                " %d\n", command, status);
     }
 
-    reinit_char(&translated);
-    reinit_char(&arg1);
+    reinit_str(&translated);
+    reinit_str(&arg1);
     return status;
 }
 
@@ -493,15 +493,15 @@ void vm_code_writer_close(code_writer *cw) {
     fprintf(out, "%s\n", or_op);
     fprintf(out, "%s\n", neg_op);
     fprintf(out, "%s\n", not_op);
-    reinit_char(&add_op);
-    reinit_char(&sub_op);
-    reinit_char(&eq_op);
-    reinit_char(&gt_op);
-    reinit_char(&lt_op);
-    reinit_char(&and_op);
-    reinit_char(&or_op);
-    reinit_char(&neg_op);
-    reinit_char(&not_op);
+    reinit_str(&add_op);
+    reinit_str(&sub_op);
+    reinit_str(&eq_op);
+    reinit_str(&gt_op);
+    reinit_str(&lt_op);
+    reinit_str(&and_op);
+    reinit_str(&or_op);
+    reinit_str(&neg_op);
+    reinit_str(&not_op);
     
 
     ht_delete(vm_op_to_asm);
@@ -545,7 +545,7 @@ code_writer *cw_new(FILE *outfile, char *infile_name) {
  */
 void cw_set_in_name(code_writer *cw, char *in_name){
     if (cw->in_name != NULL) {
-        reinit_char(&(cw->in_name));
+        reinit_str(&(cw->in_name));
     }
 
     if (in_name != NULL) {
@@ -563,7 +563,7 @@ void cw_set_in_name(code_writer *cw, char *in_name){
  * @param func the new func name
  */
 void cw_set_func(code_writer *cw, char *func) {
-    reinit_char(&(cw->func));
+    reinit_str(&(cw->func));
 
     if (func != NULL) {
         cw->func = strdup(func);
@@ -584,10 +584,10 @@ void cw_delete(code_writer **cw) {
         (*cw)->out = NULL;
     }
     if ((*cw)->in_name != NULL) {
-        reinit_char(&((*cw)->in_name));
+        reinit_str(&((*cw)->in_name));
     }
     if ((*cw)->func != NULL) {
-        reinit_char(&((*cw)->func));
+        reinit_str(&((*cw)->func));
     }
     if (*cw != NULL) {
         free(*cw);

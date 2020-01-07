@@ -29,7 +29,7 @@ int vm_strcmp(char*, char*);
 fmt_str *fmt_str_new(const char*, int);
 int fmt_str_len(const fmt_str*);
 void fmt_str_delete(fmt_str**);
-void reinit_char(char**);
+void reinit_str(char**);
 int num_digits(int);
 
 #endif /* _VM_UTIL_H */

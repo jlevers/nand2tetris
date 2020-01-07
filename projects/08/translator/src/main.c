@@ -21,12 +21,12 @@ void process_file(char *in_path, code_writer *cw) {
 
     while ((line = vm_advance(infile)) != NULL) {
         vm_write_command(line, vm_command_type(line), cw);
-        reinit_char(&line);
+        reinit_str(&line);
     }
 
     fclose(infile);
-    reinit_char(&infile_name_noext);
-    reinit_char(&(cw->in_name));
+    reinit_str(&infile_name_noext);
+    reinit_str(&(cw->in_name));
     path_parts_delete(&in_path_parts);
 }
 
