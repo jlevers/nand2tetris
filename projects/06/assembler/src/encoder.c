@@ -16,77 +16,84 @@
 const char MEM = 'M';
 const int COMP_CODE_LEN = 6;
 
+/*
+ * Note that while this assembler supports giving multi-symbol destinations in any order,
+ * the CPUEmulator.sh program supplied with the Nand2Tetris course only allows multiple destinations
+ * when given in a specific order (e.g., CPUEmulator.sh supports the destination "MD", but not "DM").
+ * That means that if you're testing your Hack programs using CPUEmulator.sh, you will get the error
+ * "In line XXX, Destination expected" if you use an alternate multi-destination code.
+ */
 const char *DESTINATIONS[][6] = {
-	{"M\0"},
-	{"D\0"},
-	{"MD\0", "DM\0"},
-	{"A\0"},
-	{"AM\0", "MA\0"},
-    {"AD\0", "DA\0"},
-    {"AMD\0", "ADM\0", "MAD\0", "MDA\0", "DMA\0", "DAM\0"}
+	{"M"},
+	{"D"},
+	{"MD", "DM"},
+	{"A"},
+	{"AM", "MA"},
+    {"AD", "DA"},
+    {"AMD", "ADM", "MAD", "MDA", "DMA", "DAM"}
 };
 int DESTINATION_LENGTHS[7] = {1, 1, 2, 1, 2, 2, 6};
 const char *DESTINATION_CODES[] = {
-	"001\0",
-	"010\0",
-	"011\0",
-	"100\0",
-	"101\0",
-	"110\0",
-	"111\0"
+	"001",
+	"010",
+	"011",
+	"100",
+	"101",
+	"110",
+	"111"
 };
 
 const char *COMPUTATIONS[][4] = {
-    {"0\0"},
-	{"1\0"},
-	{"-1\0"},
-	{"D\0"},
-	{"A\0", "M\0"},
-	{"!D\0"},
-	{"!A\0", "!M\0"},
-	{"-D\0"},
-	{"-A\0", "-M\0"},
-	{"D+1\0", "1+D\0"},
-    {"A+1\0", "1+A\0", "M+1\0", "1+M\0"},
-	{"D-1\0"},
-	{"A-1\0", "M-1\0"},
-	{"D+A\0", "A+D\0", "D+M\0", "M+D\0"},
-	{"D-A\0", "D-M\0"},
-	{"A-D\0", "M-D\0"},
-    {"D&A\0", "A&D\0", "D&M\0", "M&D\0"},
-	{"D|A\0", "A|D\0", "D|M\0", "M|D\0"}
+    {"0"},
+	{"1"},
+	{"-1"},
+	{"D"},
+	{"A", "M"},
+	{"!D"},
+	{"!A", "!M"},
+	{"-D"},
+	{"-A", "-M"},
+	{"D+1", "1+D"},
+    {"A+1", "1+A", "M+1", "1+M"},
+	{"D-1"},
+	{"A-1", "M-1"},
+	{"D+A", "A+D", "D+M", "M+D"},
+	{"D-A", "D-M"},
+	{"A-D", "M-D"},
+    {"D&A", "A&D", "D&M", "M&D"},
+	{"D|A", "A|D", "D|M", "M|D"}
 };
 int COMPUTATION_LENGTHS[18] = {1, 1, 1, 1, 2, 1, 2, 1, 2, 2, 4, 1, 2, 4, 2, 2, 4, 4};
 const char *COMPUTATION_CODES[] = {
-    "101010\0",
-	"111111\0",
-	"111010\0",
-	"001100\0",
-	"110000\0",
-	"001101\0",
-	"110001\0",
-	"001111\0",
-	"110011\0",
-    "011111\0",
-	"110111\0",
-	"001110\0",
-	"110010\0",
-	"000010\0",
-	"010011\0",
-	"000111\0",
-	"000000\0",
-	"010101\0"
+    "101010",
+	"111111",
+	"111010",
+	"001100",
+	"110000",
+	"001101",
+	"110001",
+	"001111",
+	"110011",
+    "011111",
+	"110111",
+	"001110",
+	"110010",
+	"000010",
+	"010011",
+	"000111",
+	"000000",
+	"010101"
 };
 
 int NUM_JUMP_TYPES = 7;
 const char *JUMPS[] = {
-	"JGT\0",
-	"JEQ\0",
-	"JGE\0",
-	"JLT\0",
-	"JNE\0",
-	"JLE\0",
-	"JMP\0"
+	"JGT",
+	"JEQ",
+	"JGE",
+	"JLT",
+	"JNE",
+	"JLE",
+	"JMP"
 };
 // The jump codes are the same as the destination codes
 const char **jump_codes = DESTINATION_CODES;
