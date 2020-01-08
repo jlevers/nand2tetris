@@ -14,6 +14,7 @@ ht_hash_table* constructor(int size) {
     ht_insert(ht, "ARG", "0000000000000010");
     ht_insert(ht, "THIS", "0000000000000011");
     ht_insert(ht, "THAT", "0000000000000100");
+    ht_insert(ht, "TEMP", "0000000000000101");
     ht_insert(ht, "R0", "0000000000000000");
     ht_insert(ht, "R1", "0000000000000001");
     ht_insert(ht, "R2", "0000000000000010");
