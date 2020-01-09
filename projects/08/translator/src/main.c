@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
 
             tinydir_next(&dir);
         }
+        tinydir_close(&dir);
     } else {
         process_file(argv[1], cw);
     }
