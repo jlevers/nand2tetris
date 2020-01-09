@@ -28,7 +28,7 @@ D=M
 @R15
 A=M
 M=D
-(default:LOOP_START)
+(Main.main:LOOP_START)
 @ARG
 D=M
 @0
@@ -113,7 +113,7 @@ M=D
 @SP
 AM=M-1
 D=M
-@default:LOOP_START
+@Main.main:LOOP_START
 D;JNE
 @LCL
 D=M
@@ -124,11 +124,59 @@ D=M
 M=M+1
 A=M-1
 M=D
+
 // End user-defined program
 
 // This terminates the program by sending it into an infinite loop
 (__INFINITE_LOOP)
 @__INFINITE_LOOP
+0;JMP
+
+(__INIT_LCL)
+@R14
+D=M
+@__END_OP
+D;JEQ
+(__INIT_LCL_LOOP)
+@LCL
+D=A+D
+D=D-1
+@TEMP
+M=D
+@0
+D=A
+@TEMP
+A=M
+M=D
+@R14
+MD=M-1
+@__INIT_LCL_LOOP
+D;JGT
+@__END_OP
+0;JMP
+
+(FUNC_RETURN)
+@LCL
+D=M
+@TEMP
+M=D
+@SP
+AM=M-1
+D=M
+@ARG
+M=D
+@SP
+M=D+1
+@TEMP
+D=M
+@THAT
+MD=D-1
+@THIS
+MD=D-1
+@ARG
+MD=D-1
+@LCL
+AM=D-1
 0;JMP
 
 (__ADD_OP)
@@ -140,7 +188,7 @@ M=M-1
 A=M-1
 D=M+D
 M=D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__SUB_OP)
@@ -152,7 +200,7 @@ M=M-1
 A=M-1
 D=M-D
 M=D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__EQ_OP)
@@ -163,7 +211,7 @@ D=M
 M=M-1
 A=M-1
 M=M-D
-@__END_ARITH_OP
+@__END_OP
 D=A
 @R14
 M=D
@@ -183,7 +231,7 @@ D=M
 M=M-1
 A=M-1
 M=M-D
-@__END_ARITH_OP
+@__END_OP
 D=A
 @R14
 M=D
@@ -203,7 +251,7 @@ D=M
 M=M-1
 A=M-1
 M=M-D
-@__END_ARITH_OP
+@__END_OP
 D=A
 @R14
 M=D
@@ -223,7 +271,7 @@ D=M
 M=M-1
 A=M-1
 M=M&D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__OR_OP)
@@ -234,24 +282,24 @@ D=M
 M=M-1
 A=M-1
 M=M|D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__NEG_OP)
 @SP
 A=M-1
 M=-M
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__NOT_OP)
 @SP
 A=M-1
 M=!M
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
-(__END_ARITH_OP)
+(__END_OP)
 @R13
 A=M
 0;JMP

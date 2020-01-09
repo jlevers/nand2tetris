@@ -230,7 +230,7 @@ M=M-1
 A=M-1
 D=M+D
 M=D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__SUB_OP)
@@ -242,7 +242,7 @@ M=M-1
 A=M-1
 D=M-D
 M=D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__EQ_OP)
@@ -253,7 +253,7 @@ D=M
 M=M-1
 A=M-1
 M=M-D
-@__END_ARITH_OP
+@__END_OP
 D=A
 @R14
 M=D
@@ -273,7 +273,7 @@ D=M
 M=M-1
 A=M-1
 M=M-D
-@__END_ARITH_OP
+@__END_OP
 D=A
 @R14
 M=D
@@ -293,7 +293,7 @@ D=M
 M=M-1
 A=M-1
 M=M-D
-@__END_ARITH_OP
+@__END_OP
 D=A
 @R14
 M=D
@@ -313,7 +313,7 @@ D=M
 M=M-1
 A=M-1
 M=M&D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__OR_OP)
@@ -324,24 +324,24 @@ D=M
 M=M-1
 A=M-1
 M=M|D
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__NEG_OP)
 @SP
 A=M-1
 M=-M
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
 (__NOT_OP)
 @SP
 A=M-1
 M=!M
-@__END_ARITH_OP
+@__END_OP
 0;JMP
 
-(__END_ARITH_OP)
+(__END_OP)
 @R13
 A=M
 0;JMP
