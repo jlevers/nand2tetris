@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "asm_constants.h"
 #include "code_writer.h"
 #include "minunit.h"
 #include "parser.h"
@@ -231,7 +232,7 @@ static char *test_code_writer() {
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_RETURN",
         vm_write_command("return", C_RETURN, file_code_writer) == WC_SUCCESS);
     mu_assert("vm_write_command did not return WC_UNSUPPORTED_CMD when given a command of type C_CALL",
-        vm_write_command("call mult 2", C_CALL, file_code_writer) == WC_UNSUPPORTED_CMD);
+        vm_write_command("call mult 2", C_CALL, file_code_writer) == WC_SUCCESS);
 
     vm_code_writer_close(file_code_writer);
 
@@ -248,6 +249,14 @@ static char *test_code_writer() {
             "D=A\n"
             "@SP\n"
             "M=D\n\n"
+            "// Save context before Sys.init call\n"
+            "@__PRE_FUNC_CALL_INIT\n"
+            "D=A\n"
+            "@R13\n"
+            "M=D\n"
+            "@__FUNC_CALL\n"
+            "0;JMP\n"
+            "(__PRE_FUNC_CALL_INIT)\n"
             "@Sys.init\n"
             "0;JMP\n\n"
             "// Begin user-defined program\n"));
@@ -286,6 +295,7 @@ static char *test_code_writer() {
     char *translate_push_arg = vm_write_push_pop(ARG, 8, C_PUSH, "Test");
     char *translate_pop_local = vm_write_push_pop(LCL, 2, C_POP, "Test");
     char *translate_push_temp = vm_write_push_pop(TEMP, 6, C_PUSH, "Test");
+    char *translate_pop_temp = vm_write_push_pop(TEMP, 2, C_POP, "Test");
     char *translate_pop_pointer = vm_write_push_pop(POINTER, 1, C_POP, "Test");
     char *translate_push_static = vm_write_push_pop(STATIC, 2, C_PUSH, "Test");
     char *translate_pop_static = vm_write_push_pop(STATIC, 4, C_POP, "Test");
@@ -326,11 +336,28 @@ static char *test_code_writer() {
             "M=D\n"));
     mu_assert("vm_write_push_pop doesn't translate `push temp 6` correctly",
         !strcmp(translate_push_temp,
-            "@11\n"
+            "@"TEMP_ADDR"\n"
+            "D=A\n"
+            "@6\n"
+            "A=D+A\n"
             "D=M\n"
             "@SP\n"
             "M=M+1\n"
             "A=M-1\n"
+            "M=D\n"));
+    mu_assert("vm_write_push_pop doesn't translate `pop temp 2` corectly",
+        !strcmp(translate_pop_temp,
+            "@"TEMP_ADDR"\n"
+            "D=A\n"
+            "@2\n"
+            "D=D+A\n"
+            "@R15\n"
+            "M=D\n"
+            "@SP\n"
+            "AM=M-1\n"
+            "D=M\n"
+            "@R15\n"
+            "A=M\n"
             "M=D\n"));
     mu_assert("vm_write_push_pop doesn't translate `pop pointer 1` correctly",
         !strcmp(translate_pop_pointer,
@@ -359,10 +386,10 @@ static char *test_code_writer() {
     reinit_str(&translate_push_arg);
     reinit_str(&translate_pop_local);
     reinit_str(&translate_push_temp);
+    reinit_str(&translate_pop_temp);
     reinit_str(&translate_pop_pointer);
     reinit_str(&translate_push_static);
     reinit_str(&translate_pop_static);
-
 
     // Test vm_write_label()
     char *valid_label = vm_write_label("Test.test", "abc_123_FOO");
@@ -415,18 +442,18 @@ static char *test_code_writer() {
 
     mu_assert("vm_write_function does not correctly translate a valid function declaration",
         !strcmp(valid_func,
-        "(asdf)\n"  // The filled-in version of DEF_FUNC_LABEL
-        "@FUNC_DEF_1\n"
-        "D=A\n"
-        "@R13\n"
-        "M=D\n"
-        "@2\n"
-        "D=A\n"
-        "@TEMP\n"
-        "M=D\n"
-        "@__INIT_LCL\n"
-        "0;JMP\n"
-        "(FUNC_DEF_1)\n"));
+            "(asdf)\n"  // The filled-in version of DEF_FUNC_LABEL
+            "@__FUNC_DEF_1\n"
+            "D=A\n"
+            "@R13\n"
+            "M=D\n"
+            "@2\n"
+            "D=A\n"
+            "@R14\n"
+            "M=D\n"
+            "@__INIT_LCL\n"
+            "0;JMP\n"
+            "(__FUNC_DEF_1)\n"));
     mu_assert("vm_write_function translates an invalid function declaration", invalid_func == NULL);
 
     reinit_str(&valid_func);
@@ -443,6 +470,56 @@ static char *test_code_writer() {
             "0;JMP\n"));
 
     reinit_str(&ret);
+
+
+    // Test vm_write_call()
+    char *call = vm_write_call("func", 4);
+
+    mu_assert("vm_write_call does not correctly translate a call command",
+        !strcmp(call,
+            "@__FUNC_RET_ADDR_1\n"
+            "D=A\n"
+            "@R14\n"
+            "M=D\n"
+            "@4\n"
+            "D=A\n"
+            "@R15\n"
+            "M=D\n"
+            "@__PRE_FUNC_CALL_1\n"
+            "D=A\n"
+            "@R13\n"
+            "M=D\n"
+            "@__FUNC_CALL\n"
+            "0;JMP\n"
+            "(__PRE_FUNC_CALL_1)\n"
+            "@func\n"
+            "0;JMP\n"
+            "(__FUNC_RET_ADDR_1)\n"));
+
+    reinit_str(&call);
+
+
+    // Test vms_name()
+    vm_mem_seg named = {
+        .vm_name = "named",
+        .hack_name = "NAME",
+        .begin_addr = 12,
+        .end_addr = 13
+    };
+    vm_mem_seg no_name = {
+        .vm_name = "test",
+        .hack_name = NULL,
+        .begin_addr = 8,
+        .end_addr = 17
+    };
+    char *with_name = vms_name(named);
+    char *without_name = vms_name(no_name);
+
+    mu_assert("vms_name doesn't return the hack_name of a vms_mem_seg with a defined assembly label name",
+        !strcmp(with_name, "NAME"));
+    mu_assert("vmvs_name doesn't return the begin_addr of a vms_mem_seg with a NULL assembly label name",
+        !strcmp(without_name, "8"));
+
 
     return 0;
 }

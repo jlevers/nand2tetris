@@ -67,6 +67,7 @@ char *vm_write_push_pop(vm_mem_seg, int, vm_command_t, char*);
 char *vm_write_label(char*, char*);
 char *vm_write_goto(char*, char*);
 char *vm_write_if(char*, char*);
+char *vm_write_call(char*, int);
 char *vm_write_function(code_writer*, int);
 char *vm_write_return();
 void vm_code_writer_close(code_writer*);
@@ -75,5 +76,7 @@ code_writer *cw_new(FILE*, char*, char*);
 void cw_set_func(code_writer*, char*);
 void cw_set_in_name(code_writer*, char*);
 void cw_delete(code_writer**);
+
+char *vms_name(vm_mem_seg);
 
 #endif /* _VM_CODE_WRITER_H */

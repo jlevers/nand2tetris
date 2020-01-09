@@ -12,17 +12,14 @@
  * @R14:
  *  - Stores the address to jump to after completing a true/false operation.
  *  - Stores the number of local variables that need to be initialized when creating function definitions.
- *
- * @R15:
- *  - Stores intermediate pointers in pop operations.
- *
- * TEMP[0]:
  *  - Stores the number of local variables to initialize when calling a function
  *  - Stores a pointer to the frame of a returning function
  *  - Stores the return address for a called function, which is set by the caller function
- * TEMP[1]:
- *  - Stores the addresses of local variables while they're being initialized to 0
- *  - When returning from a function, stores the return address to return to
+
+ *
+ * @R15:
+ *  - Stores intermediate pointers in pop operations.
+ *  - Stores the return address to return to when returning from a function
  *  - Stores the number of arguments pushed onto the stack for function that's being called
  *
  * All internal procedure labels begin with a double underscore: __LABEL_NAME
@@ -38,6 +35,14 @@ const fmt_str INIT = {
         "D=A\n"
         "@SP\n"
         "M=D\n\n"
+        "// Save context before Sys.init call\n"
+        "@__PRE_FUNC_CALL_INIT\n"
+        "D=A\n"
+        "@R13\n"
+        "M=D\n"
+        "@__FUNC_CALL\n"
+        "0;JMP\n"
+        "(__PRE_FUNC_CALL_INIT)\n"
         "@Sys.init\n"
         "0;JMP\n\n"
         "// Begin user-defined program\n",
@@ -168,6 +173,37 @@ const fmt_str PUSH_CONSTANT_SEG = {
     .fmt_len = 2
 };
 
+const fmt_str PUSH_LITERAL_SEG = {
+    .str =
+        "@%s\n"
+        "D=A\n"
+        "@%d\n"
+        "A=D+A\n"
+        "D=M\n"
+        "@SP\n"
+        "M=M+1\n"
+        "A=M-1\n"
+        "M=D\n",
+    .fmt_len = 4
+};
+
+const fmt_str POP_LITERAL_SEG = {
+    .str =
+        "@%s\n"
+        "D=A\n"
+        "@%d\n"
+        "D=D+A\n"
+        "@R15\n"
+        "M=D\n"
+        "@SP\n"
+        "AM=M-1\n"
+        "D=M\n"
+        "@R15\n"
+        "A=M\n"
+        "M=D\n",
+    .fmt_len = 4
+};
+
 const fmt_str PUSH_VIRTUAL_SEG = {
     .str =
         "@%s\n"
@@ -269,27 +305,27 @@ const fmt_str DEF_FUNC_INIT = {
     .str =
         "(%s)\n"  // The filled-in version of DEF_FUNC_LABEL
         // Store the address to jump back to after initializing the function in R13
-        "@FUNC_DEF_%d\n"
+        "@__FUNC_DEF_%d\n"
         "D=A\n"
         "@R13\n"
         "M=D\n"
-        // Store the number of local variables to initialize in TEMP[0]
+        // Store the number of local variables to initialize in R14
         "@%d\n"
         "D=A\n"
-        "@TEMP\n"
+        "@R14\n"
         "M=D\n"
         // Jump to the local variables initialization procedure
         "@__INIT_LCL\n"
         "0;JMP\n"
         // A label for the main body of the function
-        "(FUNC_DEF_%d)\n",
+        "(__FUNC_DEF_%d)\n",
     .fmt_len = 8
 };
 
 const char *INIT_FUNC_LCL =
     "(__INIT_LCL)\n"
-    // Get the number of local variables to initialize from TEMP[0]
-    "@TEMP\n"
+    // Get the number of local variables to initialize from R14
+    "@R14\n"
     "D=M\n"
     // If there are no local variables in the function, jump back to the function definition
     "@__END_OP\n"
@@ -298,21 +334,15 @@ const char *INIT_FUNC_LCL =
     // Make the address of the Nth local variable equal to (@LCL + N - 1) since addressing is zero-indexed
     "@LCL\n"
     "D=M+D\n"
-    "D=D-1\n"
-    // Store this local variable's address in TEMP[1]
-    "@TEMP\n"
-    "A=A+1\n"
-    "M=D\n"
+    "A=D-1\n"
     // Set the local variable to 0
-    "@0\n"
-    "D=A\n"
-    "@TEMP\n"
-    "A=A+1\n"
-    "A=M\n"
-    "M=D\n"
+    "M=0\n"
     // Decrement how many local variables need to be initialized
-    "@TEMP\n"
+    "@R14\n"
     "MD=M-1\n"
+    // Increment the stack pointer
+    "@SP\n"
+    "M=M+1\n"
     // Keep looping if there are still variables to initialize
     "@__INIT_LCL_LOOP\n"
     "D;JGT\n"
@@ -326,17 +356,16 @@ const char *FUNC_GOTO_RETURN =
 
 const char *FUNC_RETURN =
     "(__FUNC_RETURN)\n"
-    // Store the returning function's frame in TEMP[0]
+    // Store the returning function's frame in R14
     "@LCL\n"
     "D=M\n"
-    "@TEMP\n"
+    "@R14\n"
     "M=D\n"
-    // Store the return address of the caller function in TEMP[1]
+    // Store the return address of the caller function in R15
     "@5\n"
     "A=D-A\n"
     "D=M\n"
-    "@TEMP\n"
-    "A=A+1\n"
+    "@R15\n"
     "M=D\n"
     // Make ARG[0] equal to the return value, which is the top item on the stack
     "@SP\n"
@@ -351,32 +380,114 @@ const char *FUNC_RETURN =
     "@SP\n"
     "M=D+1\n"
     // Reset THAT to be the caller function's THAT address
-    "@TEMP\n"
+    "@R14\n"
     "AM=M-1\n"
     "D=M\n"
     "@THAT\n"
     "M=D\n"
     // Reset THIS to be the caller function's THIS address
-    "@TEMP\n"
+    "@R14\n"
     "AM=M-1\n"
     "D=M\n"
     "@THIS\n"
     "M=D\n"
     // Reset ARG to be the caller function's ARG address
-    "@TEMP\n"
+    "@R14\n"
     "AM=M-1\n"
     "D=M\n"
     "@ARG\n"
     "M=D\n"
     // Rest LCL to be the caller function's LCL address
-    "@TEMP\n"
+    "@R14\n"
     "AM=M-1\n"
     "D=M\n"
     "@LCL\n"
     "M=D\n"
     // Retrieve the return address of the caller function and jump to it
-    "@TEMP\n"
-    "A=A+1\n"
+    "@R15\n"
     "A=M\n"
     "0;JMP\n";
 
+const fmt_str FUNC_GOTO_CALL = {
+    .str =
+        // Store return address in R14
+        "@__FUNC_RET_ADDR_%d\n"
+        "D=A\n"
+        "@R14\n"
+        "M=D\n"
+        // Store number of arguments in R15
+        "@%d\n"
+        "D=A\n"
+        "@R15\n"
+        "M=D\n"
+        // Store current program location in R13 to be jumped back to after running __FUNC_CALL
+        "@__PRE_FUNC_CALL_%d\n"
+        "D=A\n"
+        "@R13\n"
+        "M=D\n"
+        // Jump to function call procedure
+        "@__FUNC_CALL\n"
+        "0;JMP\n"
+        "(__PRE_FUNC_CALL_%d)\n"
+        "@%s\n"
+        "0;JMP\n"
+        "(__FUNC_RET_ADDR_%d)\n",
+    .fmt_len = 12
+};
+
+const char *FUNC_CALL =
+    "(__FUNC_CALL)\n"
+    // Push return address onto stack
+    "@R14\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M+1\n"
+    "A=M-1\n"
+    "M=D\n"
+    // Push LCL
+    "@LCL\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M+1\n"
+    "A=M-1\n"
+    "M=D\n"
+    // Push ARG
+    "@ARG\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M+1\n"
+    "A=M-1\n"
+    "M=D\n"
+    // Push THIS
+    "@THIS\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M+1\n"
+    "A=M-1\n"
+    "M=D\n"
+    // Push THAT
+    "@THAT\n"
+    "D=M\n"
+    "@SP\n"
+    "M=M+1\n"
+    "A=M-1\n"
+    "M=D\n"
+    // Reposition ARG at SP - number of args - 5
+    // (5 because the arguments for the called function are on the stack before the calling function's
+    // return, LCL, ARG, THIS, and THAT addresses)
+    "@SP\n"
+    "D=M\n"
+    "@5\n"
+    "D=D-A\n"
+    "@R15\n"
+    "D=D-M\n"
+    "@ARG\n"
+    "M=D\n"
+    // Reposition LCL at SP
+    "@SP\n"
+    "D=M\n"
+    "@LCL\n"
+    "M=D\n"
+    // Transfer control to the called function
+    "@__END_OP\n"
+    "0;JMP\n";

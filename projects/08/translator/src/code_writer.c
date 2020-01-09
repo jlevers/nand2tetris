@@ -20,7 +20,7 @@ const vm_mem_seg ARG = {"argument", "ARG", 2, -1};
 const vm_mem_seg THIS = {"this", "THIS", 3, -1};
 const vm_mem_seg THAT = {"that", "THAT", 4, -1};
 const vm_mem_seg POINTER = {"pointer", NULL, 3, 4};
-const vm_mem_seg TEMP = {"temp", "TEMP", 5, 12};
+const vm_mem_seg TEMP = {"temp", NULL, 5, 12};
 const vm_mem_seg GENERAL = {"general", NULL, 13, 15};
 // This segment doesn't actually reference the entire memory, but saying that it does
 // makes some math in vm_translate_push work nicely.
@@ -36,6 +36,7 @@ const vm_mem_seg SEG_INVALID = {NULL, NULL, -1, -1};
 
 static int num_arith_calls = 0;
 static int num_func_definitions = 0;
+static int num_func_calls = 0;
 
 /* END STATIC VARIABLES */
 
@@ -344,11 +345,12 @@ vm_wc_status vm_write_command(char *command, vm_command_t command_type, code_wri
         translated = vm_write_goto(cw->func, arg1);
     } else if (command_type == C_IF) {
         translated = vm_write_if(cw->func, arg1);
+    } else if (command_type == C_CALL) {
+        translated = vm_write_call(arg1, arg2);
     } else if (command_type == C_FUNCTION) {
         cw_set_func(cw, arg1);
         translated = vm_write_function(cw, arg2);
     } else if (command_type == C_RETURN) {
-        cw_set_func(cw, NULL);
         translated = vm_write_return();
     } else if (command_type == C_INVALID) {
         printf("[ERR] Invalid command %s\n", command);
@@ -420,10 +422,14 @@ char *vm_write_push_pop(vm_mem_seg segment, int index, vm_command_t cmd_type, ch
          * the "pop" command cannot be used with it.
          */
         push_encoded = fmt_str_printf(&PUSH_CONSTANT_SEG, num_digits(mem_addr), mem_addr);
-    } else if (segcmp(segment, LCL) || segcmp(segment, ARG) || segcmp(segment, THIS) || segcmp(segment, THAT)) {
-        push_encoded = fmt_str_printf(cmd_type == C_PUSH ? &PUSH_VIRTUAL_SEG : &POP_VIRTUAL_SEG,
-            strlen(segment.hack_name) + num_digits(index),
-            segment.hack_name, index);
+    } else if (segcmp(segment, LCL) || segcmp(segment, ARG) || segcmp(segment, THIS) || segcmp(segment, THAT) || segcmp(segment, TEMP)) {
+        char *seg_hack_name = vms_name(segment);
+        const fmt_str *fs = cmd_type == C_PUSH ? &PUSH_VIRTUAL_SEG : &POP_VIRTUAL_SEG;
+        if (segcmp(segment, TEMP)) {
+            fs = cmd_type == C_PUSH ? &PUSH_LITERAL_SEG : &POP_LITERAL_SEG;
+        }
+        push_encoded = fmt_str_printf(fs, strlen(seg_hack_name) + num_digits(index), seg_hack_name, index);
+        reinit_str(&seg_hack_name);
     } else if (segcmp(segment, POINTER) || segcmp(segment, TEMP)) {
         push_encoded = fmt_str_printf(cmd_type == C_PUSH ? &PUSH_POINTER_SEG : &POP_POINTER_SEG, num_digits(mem_addr), mem_addr);
     } else if (segcmp(segment, STATIC)) {
@@ -507,6 +513,30 @@ char *vm_write_function(code_writer *cw, int num_args) {
 char *vm_write_return() {
     return (char*)strdup(FUNC_GOTO_RETURN);
 }
+
+
+/**
+ * Translates a VM call command into Hack assembly code.
+ *
+ * @param func the name of the function being called
+ * @param argc the number of arguments pushed onto the stack for @func
+ * @return     the Hack code needed to call the given function
+ */
+char *vm_write_call(char* func, int argc) {
+    char *call = NULL;
+
+    if (!valid_identifier(func, 0)) {
+        printf("[ERR] Attempt to call invalid function %s\n", func);
+    } else if (func != NULL) {
+        call = fmt_str_printf(
+            &FUNC_GOTO_CALL,
+            4 * num_digits(num_func_calls) + num_digits(argc) + strlen(func),
+            num_func_calls, argc, num_func_calls, num_func_calls, func, num_func_calls
+        );
+        num_func_calls++;
+    }
+
+    return call;
 }
 
 
@@ -525,6 +555,9 @@ void vm_code_writer_close(code_writer *cw) {
      * All system-level assembly routines should go after this line. Any assembly routines placed before this
      * may end up being run in the middle of the user's program.
      */
+
+    // Hack routine for saving caller function state when calling a function
+    fprintf(out, "%s\n", FUNC_CALL);
 
     // Hack routine to initialize a function's local variables
     fprintf(out, "%s\n", INIT_FUNC_LCL);
@@ -659,4 +692,24 @@ void cw_delete(code_writer **cw) {
         free(*cw);
         *cw = NULL;
     }
+}
+
+
+/**
+ * Gets the assembly symbol or beginning address (in string form) of a vm_mem_seg struct.
+ *
+ * @param vms the vm_mem_seg to get the assembly symbol/address from
+ * @return    the assembly address to use
+ */
+char *vms_name(vm_mem_seg vms) {
+    char *name = NULL;
+    if (vms.hack_name != NULL) {
+        name = strdup(vms.hack_name);
+    } else {
+        int len = num_digits(vms.begin_addr);
+        name = calloc(len + 1, sizeof(char));
+        snprintf(name, len + 1, "%d", vms.begin_addr);
+    }
+
+    return name;
 }
