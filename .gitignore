@@ -1,5 +1,6 @@
-*.gch
 *.o
 */**/build/
 */**/*.hack
 */**/.vscode
+
+tools/
